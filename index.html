@@ -764,6 +764,12 @@
 
     <script>
         // ========================================
+        // ハードコードAPIキー（テスト用）
+        // ========================================
+        // ⚠️ ここにAPIキーを直接貼り付ければ、設定画面なしで動きます（公開注意！）
+        const HARDCODED_API_KEY = "";
+        
+        // ========================================
         // グローバル変数
         // ========================================
         let chart = null;
@@ -1198,72 +1204,71 @@
         }
 
         // ========================================
-        // Gemini API呼び出し（完全ハードコード版）
+        // Gemini API呼び出し（標準fetchのみ、SDK不使用）
         // ========================================
-        async function callGeminiAPI_Flash(apiKey, prompt) {
-            console.log('🤖 Gemini API呼び出し開始 (モデル: gemini-1.5-flash)');
+        async function callGeminiAPI(apiKey, prompt) {
+            console.log('='.repeat(60));
+            console.log('🤖 Gemini API呼び出し開始');
+            console.log('APIキー:', apiKey ? (apiKey.substring(0, 10) + '...') : 'なし');
+            console.log('='.repeat(60));
             
-            // エンドポイントを完全にハードコード
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            // エンドポイントを完全にハードコード（gemini-1.5-flash）
+            const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
+            const fullUrl = `${url}?key=${apiKey}`;
             
-            console.log('📤 リクエストURL:', apiUrl);
+            console.log('📤 リクエストURL:', url);
+            console.log('🔑 APIキー付きURL:', fullUrl.substring(0, 100) + '...');
             
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }]
-                })
-            });
+            const requestBody = {
+                contents: [
+                    {
+                        parts: [
+                            {
+                                text: prompt
+                            }
+                        ]
+                    }
+                ]
+            };
             
-            console.log('📥 レスポンス:', response.status, response.statusText);
+            console.log('📦 リクエストボディ:', JSON.stringify(requestBody, null, 2).substring(0, 200) + '...');
             
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ APIエラー詳細:', errorText);
-                throw new Error(`${response.status}: ${errorText}`);
+            try {
+                const response = await fetch(fullUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                console.log('📥 レスポンスステータス:', response.status, response.statusText);
+                console.log('📥 レスポンスヘッダー:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
+                
+                const responseText = await response.text();
+                console.log('📥 レスポンステキスト:', responseText.substring(0, 500));
+                
+                if (!response.ok) {
+                    console.error('❌ APIエラー発生');
+                    console.error('ステータス:', response.status);
+                    console.error('テキスト:', responseText);
+                    throw new Error(`APIエラー: ${response.status} ${response.statusText}\n${responseText}`);
+                }
+                
+                const data = JSON.parse(responseText);
+                console.log('✅ JSONパース成功');
+                console.log('データ:', JSON.stringify(data, null, 2).substring(0, 500));
+                console.log('='.repeat(60));
+                
+                return data;
+                
+            } catch (error) {
+                console.error('❌ エラー発生:', error);
+                console.error('エラーメッセージ:', error.message);
+                console.error('エラースタック:', error.stack);
+                console.log('='.repeat(60));
+                throw error;
             }
-            
-            return await response.json();
-        }
-        
-        async function callGeminiAPI_Pro(apiKey, prompt) {
-            console.log('🤖 Gemini API呼び出し開始 (モデル: gemini-pro)');
-            
-            // エンドポイントを完全にハードコード
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
-            
-            console.log('📤 リクエストURL:', apiUrl);
-            
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: prompt
-                        }]
-                    }]
-                })
-            });
-            
-            console.log('📥 レスポンス:', response.status, response.statusText);
-            
-            if (!response.ok) {
-                const errorText = await response.text();
-                console.error('❌ APIエラー詳細:', errorText);
-                throw new Error(`${response.status}: ${errorText}`);
-            }
-            
-            return await response.json();
         }
 
         // ========================================
@@ -1311,16 +1316,17 @@
         });
 
         document.getElementById('aiAnalyzeBtn').addEventListener('click', async () => {
-            const apiKey = localStorage.getItem('geminiApiKey');
+            // ハードコードAPIキーを優先、なければLocalStorageから取得
+            let apiKey = HARDCODED_API_KEY || localStorage.getItem('geminiApiKey');
             
             if (!apiKey) {
-                alert('⚠️ Gemini APIキーを設定してください\n\n設定方法:\n1. Google AI Studio (https://ai.google.dev/) にアクセス\n2. APIキーを取得\n3. 設定ボタン（⚙️）からAPIキーを保存');
+                alert('⚠️ Gemini APIキーを設定してください\n\n設定方法:\n1. Google AI Studio (https://ai.google.dev/) にアクセス\n2. APIキーを取得\n3. 設定ボタン（⚙️）からAPIキーを保存\n\nまたは、コード内の HARDCODED_API_KEY に直接貼り付けてください');
                 document.getElementById('settingsModal').classList.add('active');
                 return;
             }
             
             console.log('🤖 AI分析開始...');
-            console.log('APIキー:', apiKey.substring(0, 10) + '...');
+            console.log('APIキーソース:', HARDCODED_API_KEY ? 'ハードコード' : 'LocalStorage');
             
             document.getElementById('loadingOverlay').classList.add('active');
             
@@ -1348,26 +1354,11 @@ MACD: ${macd ? macd.toFixed(4) : 'N/A'}
 
 感情論は排除し、数値に基づいた論理的な推論を行ってください。`;
 
-                let data;
-                try {
-                    // まず gemini-1.5-flash を試す（完全ハードコード）
-                    data = await callGeminiAPI_Flash(apiKey, prompt);
-                    console.log('✅ gemini-1.5-flash で成功');
-                } catch (error) {
-                    console.warn('⚠️ gemini-1.5-flash で失敗、gemini-pro にフォールバック');
-                    console.error('Flash エラー詳細:', error.message);
-                    // 失敗したら gemini-pro を試す（完全ハードコード）
-                    try {
-                        data = await callGeminiAPI_Pro(apiKey, prompt);
-                        console.log('✅ gemini-pro で成功');
-                    } catch (error2) {
-                        console.error('❌ 両方のモデルで失敗');
-                        console.error('Pro エラー詳細:', error2.message);
-                        throw error; // 最初のエラーを投げる
-                    }
-                }
+                // 標準fetchのみでAPI呼び出し
+                const data = await callGeminiAPI(apiKey, prompt);
+                console.log('✅ API呼び出し成功');
                 
-                console.log('✅ データ解析成功:', data);
+                console.log('✅ データ取得成功:', data);
                 
                 if (data.candidates && data.candidates[0]) {
                     const text = data.candidates[0].content.parts[0].text;
