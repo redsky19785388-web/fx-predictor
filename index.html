@@ -1198,12 +1198,46 @@
         }
 
         // ========================================
-        // Gemini API呼び出し（404エラー修正 + フォールバック）
+        // Gemini API呼び出し（完全ハードコード版）
         // ========================================
-        async function callGeminiAPI(apiKey, prompt, modelName = 'gemini-pro') {
-            console.log(`🤖 Gemini API呼び出し開始 (モデル: ${modelName})`);
+        async function callGeminiAPI_Flash(apiKey, prompt) {
+            console.log('🤖 Gemini API呼び出し開始 (モデル: gemini-1.5-flash)');
             
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            // エンドポイントを完全にハードコード
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            
+            console.log('📤 リクエストURL:', apiUrl);
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }]
+                })
+            });
+            
+            console.log('📥 レスポンス:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ APIエラー詳細:', errorText);
+                throw new Error(`${response.status}: ${errorText}`);
+            }
+            
+            return await response.json();
+        }
+        
+        async function callGeminiAPI_Pro(apiKey, prompt) {
+            console.log('🤖 Gemini API呼び出し開始 (モデル: gemini-pro)');
+            
+            // エンドポイントを完全にハードコード
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`;
             
             console.log('📤 リクエストURL:', apiUrl);
             
@@ -1316,15 +1350,19 @@ MACD: ${macd ? macd.toFixed(4) : 'N/A'}
 
                 let data;
                 try {
-                    // まず gemini-pro を試す
-                    data = await callGeminiAPI(apiKey, prompt, 'gemini-pro');
+                    // まず gemini-1.5-flash を試す（完全ハードコード）
+                    data = await callGeminiAPI_Flash(apiKey, prompt);
+                    console.log('✅ gemini-1.5-flash で成功');
                 } catch (error) {
-                    console.warn('⚠️ gemini-pro で失敗、gemini-1.5-flash にフォールバック');
-                    // 失敗したら gemini-1.5-flash を試す
+                    console.warn('⚠️ gemini-1.5-flash で失敗、gemini-pro にフォールバック');
+                    console.error('Flash エラー詳細:', error.message);
+                    // 失敗したら gemini-pro を試す（完全ハードコード）
                     try {
-                        data = await callGeminiAPI(apiKey, prompt, 'gemini-1.5-flash');
+                        data = await callGeminiAPI_Pro(apiKey, prompt);
+                        console.log('✅ gemini-pro で成功');
                     } catch (error2) {
                         console.error('❌ 両方のモデルで失敗');
+                        console.error('Pro エラー詳細:', error2.message);
                         throw error; // 最初のエラーを投げる
                     }
                 }
