@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Version 2.0.2 - AI Error Fix & UI Enhancement - Updated: 2026-01-15 -->
+<!-- Version 2.0.3 - API 404 Fix & Perfect Design - Updated: 2026-01-15 -->
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -34,82 +34,86 @@
         }
 
         .title {
-            font-size: 28px;
+            font-size: 32px;
             font-weight: 700;
             margin-bottom: 8px;
             background: linear-gradient(135deg, #00ffff, #ffd700);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            text-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
         }
 
         .subtitle {
-            font-size: 13px;
-            color: #94a3b8;
+            font-size: 14px;
+            color: #ffffff;
+            font-weight: 600;
         }
 
         .badge {
             display: inline-block;
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(255, 215, 0, 0.2));
-            border: 1px solid rgba(0, 255, 255, 0.5);
-            padding: 6px 14px;
-            border-radius: 12px;
-            font-size: 11px;
-            margin-top: 10px;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.3), rgba(255, 215, 0, 0.3));
+            border: 2px solid rgba(0, 255, 255, 0.6);
+            padding: 8px 16px;
+            border-radius: 14px;
+            font-size: 12px;
+            margin-top: 12px;
             font-weight: 700;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             color: #00ffff;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
         }
 
         .live-indicator {
             display: inline-block;
-            width: 10px;
-            height: 10px;
+            width: 12px;
+            height: 12px;
             background: #00ff88;
             border-radius: 50%;
-            margin-right: 8px;
-            animation: pulse 1.2s ease-in-out infinite;
-            box-shadow: 0 0 10px #00ff88;
+            margin-right: 10px;
+            animation: pulse 1s ease-in-out infinite;
+            box-shadow: 0 0 15px #00ff88, 0 0 30px #00ff88;
         }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.3); }
+            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 15px #00ff88, 0 0 30px #00ff88; }
+            50% { opacity: 0.3; transform: scale(1.4); box-shadow: 0 0 25px #00ff88, 0 0 50px #00ff88; }
         }
 
         .card {
-            background: rgba(30, 41, 59, 0.9);
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            border-radius: 14px;
-            padding: 18px;
-            margin-bottom: 18px;
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            background: rgba(30, 41, 59, 0.95);
+            border: 2px solid rgba(0, 255, 255, 0.4);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
         }
 
         .settings-btn {
             position: fixed;
             top: 16px;
             right: 16px;
-            width: 44px;
-            height: 44px;
+            width: 48px;
+            height: 48px;
             background: rgba(30, 41, 59, 0.95);
-            border: 2px solid rgba(0, 255, 255, 0.4);
+            border: 2px solid rgba(0, 255, 255, 0.5);
             border-radius: 50%;
             color: #00ffff;
-            font-size: 22px;
+            font-size: 24px;
             cursor: pointer;
             transition: all 0.3s ease;
             z-index: 1000;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
         }
 
         .settings-btn:hover {
-            background: rgba(0, 255, 255, 0.2);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.6);
-            transform: rotate(90deg);
+            background: rgba(0, 255, 255, 0.25);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.7);
+            transform: rotate(90deg) scale(1.1);
         }
 
         .modal {
@@ -119,11 +123,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.97);
+            background: rgba(15, 23, 42, 0.98);
             z-index: 2000;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
         }
 
         .modal.active {
@@ -132,32 +136,32 @@
 
         .modal-content {
             background: rgba(30, 41, 59, 0.98);
-            border: 2px solid rgba(0, 255, 255, 0.4);
-            border-radius: 18px;
-            padding: 28px;
-            max-width: 420px;
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 440px;
             width: 90%;
             position: relative;
-            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6);
         }
 
         .modal-title {
-            font-size: 22px;
+            font-size: 24px;
             font-weight: 700;
-            margin-bottom: 24px;
+            margin-bottom: 28px;
             color: #00ffff;
         }
 
         .close-btn {
             position: absolute;
-            top: 18px;
-            right: 18px;
-            width: 36px;
-            height: 36px;
+            top: 20px;
+            right: 20px;
+            width: 40px;
+            height: 40px;
             background: none;
             border: none;
-            color: #94a3b8;
-            font-size: 28px;
+            color: #ffffff;
+            font-size: 32px;
             cursor: pointer;
             transition: color 0.3s ease;
         }
@@ -167,46 +171,46 @@
         }
 
         .form-group {
-            margin-bottom: 18px;
+            margin-bottom: 20px;
         }
 
         .form-label {
             display: block;
-            font-size: 13px;
+            font-size: 14px;
             color: #ffffff;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             text-transform: uppercase;
-            letter-spacing: 0.8px;
-            font-weight: 600;
+            letter-spacing: 1px;
+            font-weight: 700;
         }
 
         .form-input {
             width: 100%;
-            padding: 14px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 10px;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid rgba(0, 255, 255, 0.4);
+            border-radius: 12px;
             color: #ffffff;
-            font-size: 15px;
+            font-size: 16px;
             transition: all 0.3s ease;
         }
 
         .form-input:focus {
             outline: none;
             border-color: #00ffff;
-            box-shadow: 0 0 12px rgba(0, 255, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
         }
 
         .form-hint {
-            font-size: 12px;
-            color: #94a3b8;
-            margin-top: 8px;
+            font-size: 13px;
+            color: #ffffff;
+            margin-top: 10px;
         }
 
         .form-hint a {
             color: #00ffff;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         .form-hint a:hover {
@@ -215,16 +219,16 @@
 
         .btn-group {
             display: flex;
-            gap: 14px;
-            margin-top: 24px;
+            gap: 16px;
+            margin-top: 28px;
         }
 
         .btn {
             flex: 1;
-            padding: 14px;
+            padding: 16px;
             border: none;
-            border-radius: 10px;
-            font-size: 15px;
+            border-radius: 12px;
+            font-size: 16px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -236,8 +240,8 @@
         }
 
         .btn-primary:hover {
-            box-shadow: 0 6px 20px rgba(0, 255, 255, 0.5);
-            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 255, 255, 0.6);
+            transform: translateY(-3px);
         }
 
         .btn-danger {
@@ -246,90 +250,90 @@
         }
 
         .btn-danger:hover {
-            box-shadow: 0 6px 20px rgba(255, 51, 102, 0.5);
-            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 51, 102, 0.6);
+            transform: translateY(-3px);
         }
 
         select {
             width: 100%;
-            padding: 14px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 10px;
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid rgba(0, 255, 255, 0.4);
+            border-radius: 12px;
             color: #ffffff;
-            font-size: 15px;
+            font-size: 16px;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         select:focus {
             outline: none;
             border-color: #00ffff;
-            box-shadow: 0 0 12px rgba(0, 255, 255, 0.4);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
         }
 
         .card-title {
-            font-size: 16px;
+            font-size: 18px;
             color: #ffffff;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             font-weight: 700;
         }
 
         .current-rate {
             text-align: center;
-            padding: 24px 0;
+            padding: 28px 0;
         }
 
         .rate-value {
-            font-size: 56px;
+            font-size: 64px;
             font-weight: 700;
             font-family: 'Courier New', monospace;
             background: linear-gradient(135deg, #00ffff, #ffd700);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            letter-spacing: 3px;
-            text-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            letter-spacing: 4px;
+            text-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
         }
 
         .rate-change {
-            font-size: 16px;
-            margin-top: 10px;
+            font-size: 18px;
+            margin-top: 12px;
             font-weight: 700;
         }
 
         .rate-change.up { color: #00ff88; }
         .rate-change.down { color: #ff3366; }
-        .rate-change.neutral { color: #94a3b8; }
+        .rate-change.neutral { color: #ffffff; }
 
         .indicators {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 14px;
-            margin-top: 18px;
+            gap: 16px;
+            margin-top: 20px;
         }
 
         .indicator {
             text-align: center;
-            padding: 14px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 10px;
-            border: 1px solid rgba(0, 255, 255, 0.2);
+            padding: 16px;
+            background: rgba(15, 23, 42, 0.7);
+            border-radius: 12px;
+            border: 2px solid rgba(0, 255, 255, 0.3);
         }
 
         .indicator-label {
-            font-size: 12px;
+            font-size: 13px;
             color: #ffffff;
-            margin-bottom: 8px;
-            font-weight: 600;
+            margin-bottom: 10px;
+            font-weight: 700;
         }
 
         .indicator-value {
-            font-size: 18px;
+            font-size: 20px;
             font-weight: 700;
             font-family: 'Courier New', monospace;
             color: #ffd700;
@@ -338,58 +342,58 @@
         .predictions {
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 16px;
         }
 
         .prediction-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 18px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 12px;
-            border-left: 4px solid #ffd700;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.7);
+            border-radius: 14px;
+            border-left: 5px solid #ffd700;
             transition: all 0.3s ease;
         }
 
         .prediction-item:hover {
-            background: rgba(15, 23, 42, 0.8);
-            transform: translateX(6px);
-            box-shadow: 0 4px 16px rgba(255, 215, 0, 0.2);
+            background: rgba(15, 23, 42, 0.9);
+            transform: translateX(8px);
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.3);
         }
 
         .prediction-time {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
         }
 
         .prediction-label {
-            font-size: 24px;
+            font-size: 28px;
             font-weight: 700;
             color: #ffffff;
         }
 
         .prediction-trend {
-            font-size: 14px;
-            padding: 6px 12px;
-            border-radius: 6px;
+            font-size: 16px;
+            padding: 8px 14px;
+            border-radius: 8px;
             font-weight: 700;
         }
 
         .prediction-trend.up {
-            background: rgba(0, 255, 136, 0.3);
+            background: rgba(0, 255, 136, 0.35);
             color: #00ff88;
         }
 
         .prediction-trend.down {
-            background: rgba(255, 51, 102, 0.3);
+            background: rgba(255, 51, 102, 0.35);
             color: #ff3366;
         }
 
         .prediction-trend.neutral {
-            background: rgba(148, 163, 184, 0.3);
-            color: #94a3b8;
+            background: rgba(255, 255, 255, 0.2);
+            color: #ffffff;
         }
 
         .prediction-value {
@@ -397,16 +401,16 @@
         }
 
         .prediction-price {
-            font-size: 26px;
+            font-size: 30px;
             font-weight: 700;
             font-family: 'Courier New', monospace;
             color: #ffd700;
         }
 
         .prediction-diff {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 700;
-            margin-top: 6px;
+            margin-top: 8px;
         }
 
         .prediction-diff.up { color: #00ff88; }
@@ -414,63 +418,63 @@
 
         .chart-container {
             position: relative;
-            height: 300px;
-            margin-top: 18px;
+            height: 320px;
+            margin-top: 20px;
         }
 
         .controls {
             display: flex;
-            gap: 14px;
-            margin-top: 18px;
+            gap: 16px;
+            margin-top: 20px;
         }
 
         .control-btn {
             flex: 1;
-            padding: 16px;
-            background: rgba(15, 23, 42, 0.8);
-            border: 2px solid rgba(0, 255, 255, 0.3);
-            border-radius: 10px;
+            padding: 18px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid rgba(0, 255, 255, 0.4);
+            border-radius: 12px;
             color: #ffffff;
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 700;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
         .control-btn:hover {
-            background: rgba(0, 255, 255, 0.15);
+            background: rgba(0, 255, 255, 0.2);
             border-color: #00ffff;
-            box-shadow: 0 6px 16px rgba(0, 255, 255, 0.3);
-            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0, 255, 255, 0.4);
+            transform: translateY(-3px);
         }
 
         .control-btn.ai-btn {
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.3), rgba(255, 215, 0, 0.3));
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.35), rgba(255, 215, 0, 0.35));
             border-color: #00ffff;
         }
 
         .control-btn.ai-btn:hover {
-            box-shadow: 0 6px 20px rgba(0, 255, 255, 0.5);
+            box-shadow: 0 8px 25px rgba(0, 255, 255, 0.6);
         }
 
         .ai-result {
-            margin-top: 18px;
-            padding: 20px;
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.15), rgba(255, 215, 0, 0.15));
-            border: 2px solid rgba(0, 255, 255, 0.4);
-            border-radius: 12px;
+            margin-top: 20px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(255, 215, 0, 0.2));
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 14px;
             display: none;
         }
 
         .ai-result.active {
             display: block;
-            animation: slideIn 0.4s ease;
+            animation: slideIn 0.5s ease;
         }
 
         @keyframes slideIn {
             from {
                 opacity: 0;
-                transform: translateY(-12px);
+                transform: translateY(-15px);
             }
             to {
                 opacity: 1;
@@ -479,20 +483,20 @@
         }
 
         .ai-result-title {
-            font-size: 16px;
+            font-size: 18px;
             font-weight: 700;
             color: #00ffff;
-            margin-bottom: 14px;
+            margin-bottom: 16px;
         }
 
         .ai-result-content {
-            font-size: 14px;
-            line-height: 1.8;
+            font-size: 15px;
+            line-height: 1.9;
             color: #ffffff;
         }
 
         .ai-result-content p {
-            margin: 8px 0;
+            margin: 10px 0;
         }
 
         .ai-result-content strong {
@@ -501,16 +505,16 @@
 
         .status {
             text-align: center;
-            font-size: 13px;
-            color: #94a3b8;
-            margin-top: 18px;
-            padding-top: 18px;
-            border-top: 1px solid rgba(0, 255, 255, 0.2);
+            font-size: 14px;
+            color: #ffffff;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(0, 255, 255, 0.3);
         }
 
         .status-item {
-            margin: 6px 0;
-            font-weight: 600;
+            margin: 8px 0;
+            font-weight: 700;
         }
 
         .loading-overlay {
@@ -520,11 +524,11 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(15, 23, 42, 0.95);
+            background: rgba(15, 23, 42, 0.97);
             z-index: 3000;
             align-items: center;
             justify-content: center;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(12px);
         }
 
         .loading-overlay.active {
@@ -536,13 +540,13 @@
         }
 
         .loading-spinner {
-            width: 60px;
-            height: 60px;
-            border: 5px solid rgba(0, 255, 255, 0.2);
+            width: 70px;
+            height: 70px;
+            border: 6px solid rgba(0, 255, 255, 0.2);
             border-top-color: #00ffff;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 24px;
+            margin: 0 auto 28px;
         }
 
         @keyframes spin {
@@ -550,23 +554,23 @@
         }
 
         .loading-text {
-            font-size: 18px;
+            font-size: 20px;
             color: #00ffff;
             font-weight: 700;
         }
 
         footer {
             text-align: center;
-            margin-top: 28px;
-            padding: 18px;
-            font-size: 12px;
-            color: #94a3b8;
+            margin-top: 32px;
+            padding: 20px;
+            font-size: 13px;
+            color: #ffffff;
         }
 
         footer a {
             color: #00ffff;
             text-decoration: none;
-            font-weight: 600;
+            font-weight: 700;
         }
 
         footer a:hover {
@@ -575,36 +579,36 @@
 
         @media (max-width: 480px) {
             .title {
-                font-size: 24px;
+                font-size: 26px;
             }
 
             .rate-value {
-                font-size: 42px;
+                font-size: 48px;
             }
 
             .indicators {
                 grid-template-columns: repeat(3, 1fr);
-                gap: 10px;
+                gap: 12px;
             }
 
             .indicator {
-                padding: 10px;
+                padding: 12px;
             }
 
             .indicator-value {
-                font-size: 16px;
+                font-size: 18px;
             }
 
             .prediction-label {
-                font-size: 20px;
+                font-size: 24px;
             }
 
             .prediction-price {
-                font-size: 22px;
+                font-size: 26px;
             }
 
             .chart-container {
-                height: 240px;
+                height: 260px;
             }
 
             .controls {
@@ -729,7 +733,7 @@
 
         <footer>
             <p>データ提供: <a href="https://www.exchangerate-api.com" target="_blank">Exchange Rate API</a> | AI分析: <a href="https://ai.google.dev/" target="_blank">Google Gemini</a></p>
-            <p style="margin-top: 10px;">⚠️ 投資判断は自己責任で行ってください</p>
+            <p style="margin-top: 12px;">⚠️ 投資判断は自己責任で行ってください</p>
         </footer>
     </div>
 
@@ -773,7 +777,7 @@
         let countdown = 10;
 
         // ========================================
-        // ライブ・エミュレーション機能
+        // ライブ・エミュレーション機能（毎秒微動）
         // ========================================
         function startLiveEmulation() {
             if (emulationInterval) clearInterval(emulationInterval);
@@ -802,7 +806,7 @@
                 updatePredictions();
                 updateChart();
                 
-            }, 1000);
+            }, 1000); // 毎秒更新
         }
 
         // ========================================
@@ -1071,22 +1075,22 @@
                                 label: '過去レート',
                                 data: prices,
                                 borderColor: '#00ff88',
-                                backgroundColor: 'rgba(0, 255, 136, 0.1)',
-                                borderWidth: 2,
+                                backgroundColor: 'rgba(0, 255, 136, 0.15)',
+                                borderWidth: 3,
                                 tension: 0.4,
                                 pointRadius: 0,
-                                pointHoverRadius: 5
+                                pointHoverRadius: 6
                             },
                             {
                                 label: '予測レート',
                                 data: [...Array(prices.length - 1).fill(null), prices[prices.length - 1], ...futurePrices],
                                 borderColor: '#ffd700',
-                                backgroundColor: 'rgba(255, 215, 0, 0.1)',
-                                borderWidth: 2,
-                                borderDash: [6, 6],
+                                backgroundColor: 'rgba(255, 215, 0, 0.15)',
+                                borderWidth: 3,
+                                borderDash: [8, 8],
                                 tension: 0.4,
                                 pointRadius: 0,
-                                pointHoverRadius: 5
+                                pointHoverRadius: 6
                             }
                         ]
                     },
@@ -1099,16 +1103,16 @@
                                 position: 'top',
                                 labels: {
                                     color: '#ffffff',
-                                    font: { size: 12, weight: 'bold' }
+                                    font: { size: 13, weight: 'bold' }
                                 }
                             },
                             tooltip: {
                                 mode: 'index',
                                 intersect: false,
-                                backgroundColor: 'rgba(15, 23, 42, 0.95)',
+                                backgroundColor: 'rgba(15, 23, 42, 0.98)',
                                 titleColor: '#00ffff',
                                 bodyColor: '#ffffff',
-                                borderColor: 'rgba(0, 255, 255, 0.5)',
+                                borderColor: 'rgba(0, 255, 255, 0.6)',
                                 borderWidth: 2
                             }
                         },
@@ -1121,13 +1125,13 @@
                                 max: yMax,
                                 ticks: {
                                     color: '#ffffff',
-                                    font: { size: 11, family: 'Courier New', weight: 'bold' },
+                                    font: { size: 12, family: 'Courier New', weight: 'bold' },
                                     callback: function(value) {
                                         return value.toFixed(4);
                                     }
                                 },
                                 grid: {
-                                    color: 'rgba(0, 255, 255, 0.15)'
+                                    color: 'rgba(0, 255, 255, 0.2)'
                                 }
                             }
                         },
@@ -1191,6 +1195,41 @@
                 minute: '2-digit'
             });
             document.getElementById('lastUpdate').textContent = timeString;
+        }
+
+        // ========================================
+        // Gemini API呼び出し（404エラー修正 + フォールバック）
+        // ========================================
+        async function callGeminiAPI(apiKey, prompt, modelName = 'gemini-pro') {
+            console.log(`🤖 Gemini API呼び出し開始 (モデル: ${modelName})`);
+            
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+            
+            console.log('📤 リクエストURL:', apiUrl);
+            
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }]
+                })
+            });
+            
+            console.log('📥 レスポンス:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('❌ APIエラー詳細:', errorText);
+                throw new Error(`${response.status}: ${errorText}`);
+            }
+            
+            return await response.json();
         }
 
         // ========================================
@@ -1275,48 +1314,21 @@ MACD: ${macd ? macd.toFixed(4) : 'N/A'}
 
 感情論は排除し、数値に基づいた論理的な推論を行ってください。`;
 
-                console.log('📤 Gemini APIにリクエスト送信...');
-                
-                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        contents: [{
-                            parts: [{
-                                text: prompt
-                            }]
-                        }]
-                    })
-                });
-                
-                console.log('📥 レスポンス受信:', response.status, response.statusText);
-                
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('❌ APIエラー詳細:', errorText);
-                    
-                    let errorMessage = `APIエラー: ${response.status} ${response.statusText}\n\n`;
-                    
-                    if (response.status === 400) {
-                        errorMessage += '【原因】リクエストが不正です\n【対処】APIキーを確認してください';
-                    } else if (response.status === 401) {
-                        errorMessage += '【原因】APIキーが無効です\n【対処】正しいAPIキーを設定してください';
-                    } else if (response.status === 403) {
-                        errorMessage += '【原因】APIキーに権限がありません\n【対処】Google AI StudioでAPIキーを再作成してください';
-                    } else if (response.status === 429) {
-                        errorMessage += '【原因】リクエスト制限を超えました\n【対処】しばらく待ってから再試行してください';
-                    } else {
-                        errorMessage += `【詳細】${errorText.substring(0, 200)}`;
+                let data;
+                try {
+                    // まず gemini-pro を試す
+                    data = await callGeminiAPI(apiKey, prompt, 'gemini-pro');
+                } catch (error) {
+                    console.warn('⚠️ gemini-pro で失敗、gemini-1.5-flash にフォールバック');
+                    // 失敗したら gemini-1.5-flash を試す
+                    try {
+                        data = await callGeminiAPI(apiKey, prompt, 'gemini-1.5-flash');
+                    } catch (error2) {
+                        console.error('❌ 両方のモデルで失敗');
+                        throw error; // 最初のエラーを投げる
                     }
-                    
-                    throw new Error(errorMessage);
                 }
                 
-                const data = await response.json();
                 console.log('✅ データ解析成功:', data);
                 
                 if (data.candidates && data.candidates[0]) {
@@ -1355,8 +1367,16 @@ MACD: ${macd ? macd.toFixed(4) : 'N/A'}
                 
                 if (error.message.includes('Failed to fetch')) {
                     userMessage += '【原因】ネットワークエラー\n【対処】インターネット接続を確認してください';
-                } else if (error.message.includes('API')) {
-                    userMessage += error.message;
+                } else if (error.message.includes('404')) {
+                    userMessage += '【原因】モデルが見つかりません (404エラー)\n【対処】APIキーを確認するか、しばらく待ってから再試行してください\n\n【詳細】gemini-pro と gemini-1.5-flash の両方で404エラーが発生しました';
+                } else if (error.message.includes('400')) {
+                    userMessage += '【原因】リクエストが不正です (400エラー)\n【対処】APIキーを確認してください';
+                } else if (error.message.includes('401')) {
+                    userMessage += '【原因】APIキーが無効です (401エラー)\n【対処】正しいAPIキーを設定してください';
+                } else if (error.message.includes('403')) {
+                    userMessage += '【原因】APIキーに権限がありません (403エラー)\n【対処】Google AI StudioでAPIキーを再作成してください';
+                } else if (error.message.includes('429')) {
+                    userMessage += '【原因】リクエスト制限を超えました (429エラー)\n【対処】しばらく待ってから再試行してください';
                 } else {
                     userMessage += `【エラー詳細】\n${error.message}`;
                 }
