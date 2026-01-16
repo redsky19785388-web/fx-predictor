@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<!-- Version 2.0.3 - API 404 Fix & Perfect Design - Updated: 2026-01-15 -->
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FX価格予測 AI - リアルタイム為替予測</title>
+    <title>FX価格予測 - リアルタイム為替予測</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
     <style>
         * {
@@ -14,335 +13,139 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
             color: #ffffff;
             min-height: 100vh;
-            padding: 12px;
-            overflow-x: hidden;
+            padding: 20px;
         }
 
         .container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
         }
 
         header {
             text-align: center;
-            margin-bottom: 24px;
-            padding-top: 12px;
+            margin-bottom: 30px;
         }
 
-        .title {
+        h1 {
             font-size: 32px;
             font-weight: 700;
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, #00ffff, #ffd700);
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #00f5ff 0%, #00d4ff 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            text-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
-        }
-
-        .subtitle {
-            font-size: 14px;
-            color: #ffffff;
-            font-weight: 600;
-        }
-
-        .badge {
-            display: inline-block;
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.3), rgba(255, 215, 0, 0.3));
-            border: 2px solid rgba(0, 255, 255, 0.6);
-            padding: 8px 16px;
-            border-radius: 14px;
-            font-size: 12px;
-            margin-top: 12px;
-            font-weight: 700;
-            letter-spacing: 1.5px;
-            color: #00ffff;
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
         }
 
         .live-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            background: #00ff88;
-            border-radius: 50%;
-            margin-right: 10px;
-            animation: pulse 1s ease-in-out infinite;
-            box-shadow: 0 0 15px #00ff88, 0 0 30px #00ff88;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 15px #00ff88, 0 0 30px #00ff88; }
-            50% { opacity: 0.3; transform: scale(1.4); box-shadow: 0 0 25px #00ff88, 0 0 50px #00ff88; }
-        }
-
-        .card {
-            background: rgba(30, 41, 59, 0.95);
-            border: 2px solid rgba(0, 255, 255, 0.4);
-            border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 20px;
-            backdrop-filter: blur(12px);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
-        }
-
-        .settings-btn {
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            width: 48px;
-            height: 48px;
-            background: rgba(30, 41, 59, 0.95);
-            border: 2px solid rgba(0, 255, 255, 0.5);
-            border-radius: 50%;
-            color: #00ffff;
-            font-size: 24px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 1000;
-            display: flex;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-        }
-
-        .settings-btn:hover {
-            background: rgba(0, 255, 255, 0.25);
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.7);
-            transform: rotate(90deg) scale(1.1);
-        }
-
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.98);
-            z-index: 2000;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(12px);
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: rgba(30, 41, 59, 0.98);
-            border: 2px solid rgba(0, 255, 255, 0.5);
-            border-radius: 20px;
-            padding: 32px;
-            max-width: 440px;
-            width: 90%;
-            position: relative;
-            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.6);
-        }
-
-        .modal-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 28px;
-            color: #00ffff;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            width: 40px;
-            height: 40px;
-            background: none;
-            border: none;
-            color: #ffffff;
-            font-size: 32px;
-            cursor: pointer;
-            transition: color 0.3s ease;
-        }
-
-        .close-btn:hover {
-            color: #ff3366;
-        }
-
-        .form-group {
-            margin-bottom: 20px;
-        }
-
-        .form-label {
-            display: block;
+            gap: 8px;
             font-size: 14px;
-            color: #ffffff;
-            margin-bottom: 12px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 700;
-        }
-
-        .form-input {
-            width: 100%;
-            padding: 16px;
-            background: rgba(15, 23, 42, 0.9);
-            border: 2px solid rgba(0, 255, 255, 0.4);
-            border-radius: 12px;
-            color: #ffffff;
-            font-size: 16px;
-            transition: all 0.3s ease;
-        }
-
-        .form-input:focus {
-            outline: none;
-            border-color: #00ffff;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-        }
-
-        .form-hint {
-            font-size: 13px;
-            color: #ffffff;
+            color: #10b981;
             margin-top: 10px;
         }
 
-        .form-hint a {
-            color: #00ffff;
-            text-decoration: none;
-            font-weight: 700;
+        .live-dot {
+            width: 12px;
+            height: 12px;
+            background: #10b981;
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+            box-shadow: 0 0 10px #10b981;
         }
 
-        .form-hint a:hover {
-            text-decoration: underline;
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
         }
 
-        .btn-group {
-            display: flex;
-            gap: 16px;
-            margin-top: 28px;
-        }
-
-        .btn {
-            flex: 1;
-            padding: 16px;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #00ffff, #00cccc);
-            color: #0f172a;
-        }
-
-        .btn-primary:hover {
-            box-shadow: 0 8px 25px rgba(0, 255, 255, 0.6);
-            transform: translateY(-3px);
-        }
-
-        .btn-danger {
-            background: linear-gradient(135deg, #ff3366, #cc2952);
-            color: #ffffff;
-        }
-
-        .btn-danger:hover {
-            box-shadow: 0 8px 25px rgba(255, 51, 102, 0.6);
-            transform: translateY(-3px);
-        }
-
-        select {
-            width: 100%;
-            padding: 16px;
-            background: rgba(15, 23, 42, 0.9);
-            border: 2px solid rgba(0, 255, 255, 0.4);
-            border-radius: 12px;
-            color: #ffffff;
-            font-size: 16px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 700;
-        }
-
-        select:focus {
-            outline: none;
-            border-color: #00ffff;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+        .card {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0, 245, 255, 0.2);
+            backdrop-filter: blur(10px);
         }
 
         .card-title {
-            font-size: 18px;
-            color: #ffffff;
-            margin-bottom: 16px;
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-weight: 700;
+            gap: 10px;
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+
+        .currency-selector {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 245, 255, 0.3);
+            background: rgba(15, 23, 42, 0.8);
+            color: #ffffff;
+            cursor: pointer;
         }
 
         .current-rate {
             text-align: center;
-            padding: 28px 0;
+            padding: 30px 0;
+        }
+
+        .rate-label {
+            font-size: 18px;
+            color: #ffffff;
+            margin-bottom: 10px;
+            font-weight: 600;
         }
 
         .rate-value {
             font-size: 64px;
             font-weight: 700;
             font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #00ffff, #ffd700);
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
-            letter-spacing: 4px;
-            text-shadow: 0 0 40px rgba(0, 255, 255, 0.4);
         }
 
-        .rate-change {
-            font-size: 18px;
-            margin-top: 12px;
-            font-weight: 700;
-        }
-
-        .rate-change.up { color: #00ff88; }
-        .rate-change.down { color: #ff3366; }
-        .rate-change.neutral { color: #ffffff; }
-
-        .indicators {
+        .technical-indicators {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
             margin-top: 20px;
         }
 
         .indicator {
-            text-align: center;
-            padding: 16px;
-            background: rgba(15, 23, 42, 0.7);
-            border-radius: 12px;
-            border: 2px solid rgba(0, 255, 255, 0.3);
+            background: rgba(15, 23, 42, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid rgba(0, 245, 255, 0.2);
         }
 
         .indicator-label {
-            font-size: 13px;
+            font-size: 14px;
             color: #ffffff;
-            margin-bottom: 10px;
-            font-weight: 700;
+            margin-bottom: 8px;
+            font-weight: 600;
         }
 
         .indicator-value {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: 700;
             font-family: 'Courier New', monospace;
-            color: #ffd700;
+            color: #00f5ff;
         }
 
         .predictions {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
+            display: grid;
+            gap: 15px;
         }
 
         .prediction-item {
@@ -350,49 +153,14 @@
             justify-content: space-between;
             align-items: center;
             padding: 20px;
-            background: rgba(15, 23, 42, 0.7);
-            border-radius: 14px;
-            border-left: 5px solid #ffd700;
-            transition: all 0.3s ease;
-        }
-
-        .prediction-item:hover {
-            background: rgba(15, 23, 42, 0.9);
-            transform: translateX(8px);
-            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.3);
-        }
-
-        .prediction-time {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            border: 1px solid rgba(251, 191, 36, 0.3);
         }
 
         .prediction-label {
             font-size: 28px;
-            font-weight: 700;
-            color: #ffffff;
-        }
-
-        .prediction-trend {
-            font-size: 16px;
-            padding: 8px 14px;
-            border-radius: 8px;
-            font-weight: 700;
-        }
-
-        .prediction-trend.up {
-            background: rgba(0, 255, 136, 0.35);
-            color: #00ff88;
-        }
-
-        .prediction-trend.down {
-            background: rgba(255, 51, 102, 0.35);
-            color: #ff3366;
-        }
-
-        .prediction-trend.neutral {
-            background: rgba(255, 255, 255, 0.2);
+            font-weight: 600;
             color: #ffffff;
         }
 
@@ -404,265 +172,265 @@
             font-size: 30px;
             font-weight: 700;
             font-family: 'Courier New', monospace;
-            color: #ffd700;
+            color: #fbbf24;
+            margin-bottom: 5px;
         }
 
         .prediction-diff {
-            font-size: 18px;
-            font-weight: 700;
-            margin-top: 8px;
+            font-size: 16px;
+            font-weight: 600;
         }
 
-        .prediction-diff.up { color: #00ff88; }
-        .prediction-diff.down { color: #ff3366; }
+        .prediction-diff.up {
+            color: #10b981;
+        }
+
+        .prediction-diff.down {
+            color: #ef4444;
+        }
+
+        .prediction-diff.neutral {
+            color: #94a3b8;
+        }
 
         .chart-container {
             position: relative;
-            height: 320px;
+            height: 300px;
             margin-top: 20px;
         }
 
         .controls {
-            display: flex;
-            gap: 16px;
-            margin-top: 20px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
         }
 
         .control-btn {
-            flex: 1;
-            padding: 18px;
-            background: rgba(15, 23, 42, 0.9);
-            border: 2px solid rgba(0, 255, 255, 0.4);
-            border-radius: 12px;
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: 700;
+            padding: 16px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 8px;
+            border: none;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.3s;
+            background: linear-gradient(135deg, #00f5ff 0%, #00d4ff 100%);
+            color: #0f172a;
         }
 
         .control-btn:hover {
-            background: rgba(0, 255, 255, 0.2);
-            border-color: #00ffff;
-            box-shadow: 0 8px 20px rgba(0, 255, 255, 0.4);
-            transform: translateY(-3px);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 245, 255, 0.3);
         }
 
-        .control-btn.ai-btn {
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.35), rgba(255, 215, 0, 0.35));
-            border-color: #00ffff;
-        }
-
-        .control-btn.ai-btn:hover {
-            box-shadow: 0 8px 25px rgba(0, 255, 255, 0.6);
-        }
-
-        .ai-result {
-            margin-top: 20px;
-            padding: 24px;
-            background: linear-gradient(135deg, rgba(0, 255, 255, 0.2), rgba(255, 215, 0, 0.2));
-            border: 2px solid rgba(0, 255, 255, 0.5);
-            border-radius: 14px;
-            display: none;
-        }
-
-        .ai-result.active {
-            display: block;
-            animation: slideIn 0.5s ease;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateY(-15px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .ai-result-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #00ffff;
-            margin-bottom: 16px;
-        }
-
-        .ai-result-content {
-            font-size: 15px;
-            line-height: 1.9;
-            color: #ffffff;
-        }
-
-        .ai-result-content p {
-            margin: 10px 0;
-        }
-
-        .ai-result-content strong {
-            color: #ffd700;
+        .control-btn.analysis-btn {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
         }
 
         .status {
-            text-align: center;
+            display: flex;
+            justify-content: space-around;
+            padding: 15px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
             font-size: 14px;
-            color: #ffffff;
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 2px solid rgba(0, 255, 255, 0.3);
+            color: #94a3b8;
         }
 
         .status-item {
-            margin: 8px 0;
-            font-weight: 700;
-        }
-
-        .loading-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(15, 23, 42, 0.97);
-            z-index: 3000;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(12px);
-        }
-
-        .loading-overlay.active {
             display: flex;
-        }
-
-        .loading-content {
-            text-align: center;
-        }
-
-        .loading-spinner {
-            width: 70px;
-            height: 70px;
-            border: 6px solid rgba(0, 255, 255, 0.2);
-            border-top-color: #00ffff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 28px;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        .loading-text {
-            font-size: 20px;
-            color: #00ffff;
-            font-weight: 700;
+            align-items: center;
+            gap: 8px;
         }
 
         footer {
             text-align: center;
-            margin-top: 32px;
+            margin-top: 30px;
             padding: 20px;
-            font-size: 13px;
-            color: #ffffff;
+            color: #64748b;
+            font-size: 14px;
         }
 
         footer a {
-            color: #00ffff;
+            color: #00f5ff;
             text-decoration: none;
-            font-weight: 700;
         }
 
         footer a:hover {
             text-decoration: underline;
         }
 
-        @media (max-width: 480px) {
-            .title {
-                font-size: 26px;
+        /* モーダル */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 16px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 2px solid rgba(251, 191, 36, 0.5);
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .close-btn:hover {
+            background: rgba(239, 68, 68, 0.4);
+            transform: rotate(90deg);
+        }
+
+        .modal-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #fbbf24;
+        }
+
+        .analysis-section {
+            margin-bottom: 20px;
+            padding: 20px;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 8px;
+            border-left: 4px solid #fbbf24;
+        }
+
+        .analysis-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #ffffff;
+        }
+
+        .analysis-content {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #e2e8f0;
+        }
+
+        .prediction-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        .prediction-table th,
+        .prediction-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .prediction-table th {
+            background: rgba(251, 191, 36, 0.1);
+            color: #fbbf24;
+            font-weight: 600;
+        }
+
+        .prediction-table td {
+            color: #e2e8f0;
+            font-family: 'Courier New', monospace;
+        }
+
+        @media (max-width: 600px) {
+            h1 {
+                font-size: 24px;
             }
 
             .rate-value {
                 font-size: 48px;
             }
 
-            .indicators {
-                grid-template-columns: repeat(3, 1fr);
-                gap: 12px;
-            }
-
-            .indicator {
-                padding: 12px;
-            }
-
-            .indicator-value {
-                font-size: 18px;
-            }
-
             .prediction-label {
-                font-size: 24px;
+                font-size: 20px;
             }
 
             .prediction-price {
-                font-size: 26px;
-            }
-
-            .chart-container {
-                height: 260px;
+                font-size: 24px;
             }
 
             .controls {
-                flex-direction: column;
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <button class="settings-btn" id="settingsBtn">⚙️</button>
-
     <div class="container">
         <header>
-            <h1 class="title">📊 FX価格予測 AI</h1>
-            <p class="subtitle">リアルタイム為替予測システム</p>
-            <div class="badge"><span class="live-indicator"></span>AI POWERED - LIVE</div>
+            <h1>📊 FX価格予測</h1>
+            <div class="live-indicator">
+                <div class="live-dot"></div>
+                <span>LIVE</span>
+            </div>
         </header>
 
         <div class="card">
             <div class="card-title">
-                <span>📈</span>
+                <span>💱</span>
                 <span>通貨ペア選択</span>
             </div>
-            <select id="currencyPair">
-                <option value="USD/JPY">USD/JPY (米ドル/日本円)</option>
+            <select class="currency-selector" id="currencyPair">
+                <option value="USD/JPY">USD/JPY (米ドル/円)</option>
                 <option value="EUR/USD">EUR/USD (ユーロ/米ドル)</option>
-                <option value="GBP/JPY">GBP/JPY (英ポンド/日本円)</option>
-                <option value="AUD/JPY">AUD/JPY (豪ドル/日本円)</option>
-                <option value="EUR/JPY">EUR/JPY (ユーロ/日本円)</option>
+                <option value="GBP/JPY">GBP/JPY (英ポンド/円)</option>
+                <option value="AUD/JPY">AUD/JPY (豪ドル/円)</option>
+                <option value="EUR/JPY">EUR/JPY (ユーロ/円)</option>
             </select>
         </div>
 
         <div class="card">
             <div class="card-title">
                 <span>💹</span>
-                <span>現在のレート</span>
+                <span>現在レート</span>
             </div>
             <div class="current-rate">
+                <div class="rate-label">現在価格</div>
                 <div class="rate-value" id="currentRate">---</div>
-                <div class="rate-change neutral" id="rateChange">-- (--)</div>
             </div>
 
-            <div class="indicators">
+            <div class="technical-indicators">
                 <div class="indicator">
                     <div class="indicator-label">RSI (14)</div>
-                    <div class="indicator-value" id="rsiValue">-</div>
+                    <div class="indicator-value" id="rsiValue">--</div>
                 </div>
                 <div class="indicator">
                     <div class="indicator-label">MACD</div>
-                    <div class="indicator-value" id="macdValue">-</div>
+                    <div class="indicator-value" id="macdValue">--</div>
                 </div>
                 <div class="indicator">
                     <div class="indicator-label">BB幅</div>
-                    <div class="indicator-value" id="bbValue">-</div>
+                    <div class="indicator-value" id="bbValue">--</div>
                 </div>
             </div>
         </div>
@@ -670,37 +438,35 @@
         <div class="card">
             <div class="card-title">
                 <span>🔮</span>
-                <span>基本予測 (線形回帰)</span>
+                <span>価格予測</span>
             </div>
             <div class="predictions">
                 <div class="prediction-item">
-                    <div class="prediction-time">
-                        <span class="prediction-label">⏱ 3分後</span>
-                        <span class="prediction-trend neutral" id="trend3min">横ばい</span>
-                    </div>
+                    <div class="prediction-label">3分後</div>
                     <div class="prediction-value">
                         <div class="prediction-price" id="prediction3min">---</div>
                         <div class="prediction-diff neutral" id="diff3min">--</div>
                     </div>
                 </div>
                 <div class="prediction-item">
-                    <div class="prediction-time">
-                        <span class="prediction-label">⏱ 10分後</span>
-                        <span class="prediction-trend neutral" id="trend10min">横ばい</span>
-                    </div>
+                    <div class="prediction-label">10分後</div>
                     <div class="prediction-value">
                         <div class="prediction-price" id="prediction10min">---</div>
                         <div class="prediction-diff neutral" id="diff10min">--</div>
                     </div>
                 </div>
                 <div class="prediction-item">
-                    <div class="prediction-time">
-                        <span class="prediction-label">⏱ 30分後</span>
-                        <span class="prediction-trend neutral" id="trend30min">横ばい</span>
-                    </div>
+                    <div class="prediction-label">30分後</div>
                     <div class="prediction-value">
                         <div class="prediction-price" id="prediction30min">---</div>
                         <div class="prediction-diff neutral" id="diff30min">--</div>
+                    </div>
+                </div>
+                <div class="prediction-item">
+                    <div class="prediction-label">60分後 (1時間)</div>
+                    <div class="prediction-value">
+                        <div class="prediction-price" id="prediction60min">---</div>
+                        <div class="prediction-diff neutral" id="diff60min">--</div>
                     </div>
                 </div>
             </div>
@@ -718,12 +484,7 @@
 
         <div class="controls">
             <button class="control-btn" id="refreshBtn">🔄 今すぐ更新</button>
-            <button class="control-btn ai-btn" id="aiAnalyzeBtn">🤖 AIで詳細分析</button>
-        </div>
-
-        <div class="ai-result" id="aiResult">
-            <div class="ai-result-title">🤖 AI分析結果</div>
-            <div class="ai-result-content" id="aiResultContent"></div>
+            <button class="control-btn analysis-btn" id="analysisBtn">📈 詳細テクニカル分析</button>
         </div>
 
         <div class="status">
@@ -732,43 +493,21 @@
         </div>
 
         <footer>
-            <p>データ提供: <a href="https://www.exchangerate-api.com" target="_blank">Exchange Rate API</a> | AI分析: <a href="https://ai.google.dev/" target="_blank">Google Gemini</a></p>
+            <p>データ提供: <a href="https://www.exchangerate-api.com" target="_blank">Exchange Rate API</a></p>
             <p style="margin-top: 12px;">⚠️ 投資判断は自己責任で行ってください</p>
         </footer>
     </div>
 
-    <div class="modal" id="settingsModal">
+    <!-- 分析結果モーダル -->
+    <div class="modal" id="analysisModal">
         <div class="modal-content">
             <button class="close-btn" id="closeModalBtn">×</button>
-            <div class="modal-title">⚙️ 設定</div>
-            <div class="form-group">
-                <label class="form-label">GEMINI API KEY</label>
-                <input type="password" class="form-input" id="apiKeyInput" placeholder="AIzaSy...">
-                <div class="form-hint">
-                    APIキーは <a href="https://ai.google.dev/" target="_blank">Google AI Studio</a> で取得できます
-                </div>
-            </div>
-            <div class="btn-group">
-                <button class="btn btn-primary" id="saveApiKeyBtn">💾 保存</button>
-                <button class="btn btn-danger" id="deleteApiKeyBtn">🗑️ APIキーを削除</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="loading-overlay" id="loadingOverlay">
-        <div class="loading-content">
-            <div class="loading-spinner"></div>
-            <div class="loading-text">AIが市場を分析中...</div>
+            <div class="modal-title">📈 詳細テクニカル分析結果</div>
+            <div id="analysisResult"></div>
         </div>
     </div>
 
     <script>
-        // ========================================
-        // ハードコードAPIキー（テスト用）
-        // ========================================
-        // ⚠️ ここにAPIキーを直接貼り付ければ、設定画面なしで動きます（公開注意！）
-        const HARDCODED_API_KEY = "";
-        
         // ========================================
         // グローバル変数
         // ========================================
@@ -825,69 +564,203 @@
                 const data = await response.json();
                 
                 if (data.result === 'success') {
-                    const rate = data.rates[quoteCurrency];
-                    baseRate = rate;
-                    liveRate = rate;
+                    baseRate = data.rates[quoteCurrency];
+                    liveRate = baseRate;
                     
-                    // 初回は履歴を初期化
-                    if (priceHistory.length === 0) {
-                        const now = new Date();
-                        for (let i = 0; i < 30; i++) {
-                            priceHistory.push({
-                                time: new Date(now.getTime() - (30 - i) * 1000).toLocaleTimeString('ja-JP'),
-                                price: rate + (Math.random() - 0.5) * 0.02
-                            });
-                        }
-                    }
+                    // LocalStorageに保存
+                    localStorage.setItem('lastRate', baseRate);
+                    localStorage.setItem('lastPair', currentPair);
                     
-                    return true;
+                    // ライブエミュレーション開始
+                    startLiveEmulation();
+                    
+                    updateLastUpdateTime();
                 }
             } catch (error) {
                 console.error('データ取得エラー:', error);
+                
+                // LocalStorageから前回値を取得
+                const savedRate = localStorage.getItem('lastRate');
+                const savedPair = localStorage.getItem('lastPair');
+                if (savedRate && savedPair === currentPair) {
+                    baseRate = parseFloat(savedRate);
+                    liveRate = baseRate;
+                    startLiveEmulation();
+                }
             }
-            return false;
         }
 
         // ========================================
-        // 現在レート更新
+        // UI更新
         // ========================================
         function updateCurrentRate() {
             if (liveRate === null) return;
+            document.getElementById('currentRate').textContent = liveRate.toFixed(4);
+        }
+
+        function updateTechnicalIndicators() {
+            if (priceHistory.length < 14) {
+                document.getElementById('rsiValue').textContent = '--';
+                document.getElementById('macdValue').textContent = '--';
+                document.getElementById('bbValue').textContent = '--';
+                return;
+            }
             
-            const rateElement = document.getElementById('currentRate');
-            const changeElement = document.getElementById('rateChange');
+            const rsi = calculateRSI(priceHistory);
+            const macd = calculateMACD(priceHistory);
+            const bb = calculateBollingerBands(priceHistory);
             
-            rateElement.textContent = liveRate.toFixed(4);
+            document.getElementById('rsiValue').textContent = rsi ? rsi.toFixed(2) : '--';
+            document.getElementById('macdValue').textContent = macd ? macd.toFixed(4) : '--';
+            document.getElementById('bbValue').textContent = bb ? bb.width.toFixed(4) : '--';
+        }
+
+        function updatePredictions() {
+            if (liveRate === null || priceHistory.length < 10) return;
             
-            if (priceHistory.length >= 2) {
-                const prevRate = priceHistory[priceHistory.length - 2].price;
-                const change = liveRate - prevRate;
-                const changePercent = (change / prevRate * 100).toFixed(3);
-                
-                if (change > 0) {
-                    changeElement.textContent = `▲ ${change.toFixed(4)} (+${changePercent}%)`;
-                    changeElement.className = 'rate-change up';
-                } else if (change < 0) {
-                    changeElement.textContent = `▼ ${Math.abs(change).toFixed(4)} (${changePercent}%)`;
-                    changeElement.className = 'rate-change down';
-                } else {
-                    changeElement.textContent = `→ 0.0000 (横ばい)`;
-                    changeElement.className = 'rate-change neutral';
-                }
+            // 線形回帰による予測
+            const predictions = calculatePredictions(priceHistory, liveRate);
+            
+            // 3分後
+            document.getElementById('prediction3min').textContent = predictions.min3.toFixed(4);
+            updateDiff('diff3min', predictions.min3, liveRate);
+            
+            // 10分後
+            document.getElementById('prediction10min').textContent = predictions.min10.toFixed(4);
+            updateDiff('diff10min', predictions.min10, liveRate);
+            
+            // 30分後
+            document.getElementById('prediction30min').textContent = predictions.min30.toFixed(4);
+            updateDiff('diff30min', predictions.min30, liveRate);
+            
+            // 60分後
+            document.getElementById('prediction60min').textContent = predictions.min60.toFixed(4);
+            updateDiff('diff60min', predictions.min60, liveRate);
+        }
+
+        function updateDiff(elementId, predictedPrice, currentPrice) {
+            const diff = predictedPrice - currentPrice;
+            const diffPercent = (diff / currentPrice) * 100;
+            const element = document.getElementById(elementId);
+            
+            if (diff > 0) {
+                element.textContent = `▲ ${diff.toFixed(4)} (+${diffPercent.toFixed(2)}%)`;
+                element.className = 'prediction-diff up';
+            } else if (diff < 0) {
+                element.textContent = `▼ ${Math.abs(diff).toFixed(4)} (${diffPercent.toFixed(2)}%)`;
+                element.className = 'prediction-diff down';
+            } else {
+                element.textContent = '→ 横ばい';
+                element.className = 'prediction-diff neutral';
+            }
+        }
+
+        function updateChart() {
+            if (priceHistory.length === 0) return;
+            
+            const labels = priceHistory.map(item => item.time);
+            const prices = priceHistory.map(item => item.price);
+            
+            // 予測データを追加
+            const predictions = calculatePredictions(priceHistory, liveRate);
+            const futureLabels = ['3分後', '10分後', '30分後', '60分後'];
+            const futurePrices = [predictions.min3, predictions.min10, predictions.min30, predictions.min60];
+            
+            // Y軸の範囲を動的に調整（現在価格±0.05）
+            const minPrice = liveRate - 0.05;
+            const maxPrice = liveRate + 0.05;
+            
+            if (chart) {
+                chart.data.labels = [...labels, ...futureLabels];
+                chart.data.datasets[0].data = prices;
+                chart.data.datasets[1].data = [...Array(prices.length).fill(null), ...futurePrices];
+                chart.options.scales.y.min = minPrice;
+                chart.options.scales.y.max = maxPrice;
+                chart.update('none');
+            } else {
+                const ctx = document.getElementById('trendChart').getContext('2d');
+                chart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: [...labels, ...futureLabels],
+                        datasets: [
+                            {
+                                label: '過去レート',
+                                data: prices,
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                borderWidth: 3,
+                                tension: 0.4,
+                                pointRadius: 0,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: '予測レート',
+                                data: [...Array(prices.length).fill(null), ...futurePrices],
+                                borderColor: '#fbbf24',
+                                backgroundColor: 'rgba(251, 191, 36, 0.1)',
+                                borderWidth: 3,
+                                borderDash: [5, 5],
+                                tension: 0.4,
+                                pointRadius: 5,
+                                pointHoverRadius: 8,
+                                pointBackgroundColor: '#fbbf24'
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                labels: {
+                                    color: '#ffffff',
+                                    font: {
+                                        size: 14
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#94a3b8',
+                                    maxRotation: 45,
+                                    minRotation: 45
+                                },
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.1)'
+                                }
+                            },
+                            y: {
+                                ticks: {
+                                    color: '#94a3b8'
+                                },
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.1)'
+                                },
+                                min: minPrice,
+                                max: maxPrice
+                            }
+                        }
+                    }
+                });
             }
         }
 
         // ========================================
         // テクニカル指標計算
         // ========================================
-        function calculateRSI(data, period = 14) {
-            if (data.length < period + 1) return null;
+        function calculateRSI(history, period = 14) {
+            if (history.length < period + 1) return null;
             
+            const prices = history.map(item => item.price);
             let gains = 0;
             let losses = 0;
             
-            for (let i = data.length - period; i < data.length; i++) {
-                const change = data[i].price - data[i - 1].price;
+            for (let i = prices.length - period; i < prices.length; i++) {
+                const change = prices[i] - prices[i - 1];
                 if (change > 0) {
                     gains += change;
                 } else {
@@ -906,249 +779,223 @@
             return rsi;
         }
 
-        function calculateEMA(data, period) {
-            if (data.length < period) return null;
+        function calculateMACD(history) {
+            if (history.length < 26) return null;
             
-            const multiplier = 2 / (period + 1);
-            let ema = data.slice(0, period).reduce((sum, item) => sum + item.price, 0) / period;
+            const prices = history.map(item => item.price);
+            const ema12 = calculateEMA(prices, 12);
+            const ema26 = calculateEMA(prices, 26);
             
-            for (let i = period; i < data.length; i++) {
-                ema = (data[i].price - ema) * multiplier + ema;
+            return ema12 - ema26;
+        }
+
+        function calculateEMA(prices, period) {
+            const k = 2 / (period + 1);
+            let ema = prices[0];
+            
+            for (let i = 1; i < prices.length; i++) {
+                ema = prices[i] * k + ema * (1 - k);
             }
             
             return ema;
         }
 
-        function calculateMACD(data) {
-            const ema12 = calculateEMA(data, 12);
-            const ema26 = calculateEMA(data, 26);
+        function calculateBollingerBands(history, period = 20) {
+            if (history.length < period) return null;
             
-            if (ema12 === null || ema26 === null) return null;
-            
-            return ema12 - ema26;
-        }
-
-        function calculateBollingerBands(data, period = 20) {
-            if (data.length < period) return null;
-            
-            const recentData = data.slice(-period);
-            const sma = recentData.reduce((sum, item) => sum + item.price, 0) / period;
-            
-            const variance = recentData.reduce((sum, item) => {
-                return sum + Math.pow(item.price - sma, 2);
-            }, 0) / period;
-            
+            const prices = history.slice(-period).map(item => item.price);
+            const mean = prices.reduce((a, b) => a + b, 0) / period;
+            const variance = prices.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
             const stdDev = Math.sqrt(variance);
             
             return {
-                upper: sma + (2 * stdDev),
-                middle: sma,
-                lower: sma - (2 * stdDev),
+                upper: mean + 2 * stdDev,
+                middle: mean,
+                lower: mean - 2 * stdDev,
                 width: 4 * stdDev
             };
-        }
-
-        function updateTechnicalIndicators() {
-            if (priceHistory.length < 15) {
-                document.getElementById('rsiValue').textContent = '-';
-                document.getElementById('macdValue').textContent = '-';
-                document.getElementById('bbValue').textContent = '-';
-                return;
-            }
-            
-            const rsi = calculateRSI(priceHistory);
-            if (rsi !== null) {
-                document.getElementById('rsiValue').textContent = rsi.toFixed(1);
-            }
-            
-            const macd = calculateMACD(priceHistory);
-            if (macd !== null) {
-                document.getElementById('macdValue').textContent = macd.toFixed(4);
-            }
-            
-            const bb = calculateBollingerBands(priceHistory);
-            if (bb !== null) {
-                document.getElementById('bbValue').textContent = bb.width.toFixed(4);
-            }
         }
 
         // ========================================
         // 予測計算（線形回帰）
         // ========================================
-        function linearRegression(data) {
-            const n = data.length;
-            if (n < 2) return { slope: 0, intercept: data[0]?.price || 0 };
+        function calculatePredictions(history, currentRate) {
+            if (history.length < 10) {
+                return {
+                    min3: currentRate,
+                    min10: currentRate,
+                    min30: currentRate,
+                    min60: currentRate
+                };
+            }
             
-            let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+            // 直近10個のデータで線形回帰
+            const recentData = history.slice(-10);
+            const n = recentData.length;
+            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
             
             for (let i = 0; i < n; i++) {
                 sumX += i;
-                sumY += data[i].price;
-                sumXY += i * data[i].price;
-                sumXX += i * i;
+                sumY += recentData[i].price;
+                sumXY += i * recentData[i].price;
+                sumX2 += i * i;
             }
             
-            const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
             const intercept = (sumY - slope * sumX) / n;
             
-            return { slope, intercept };
-        }
-
-        function updatePredictions() {
-            if (priceHistory.length < 2) return;
+            // 予測値を計算（トレンドに基づく）
+            const min3 = intercept + slope * (n + 3);
+            const min10 = intercept + slope * (n + 10);
+            const min30 = intercept + slope * (n + 30);
+            const min60 = intercept + slope * (n + 60);
             
-            const { slope, intercept } = linearRegression(priceHistory.slice(-30));
-            const currentIndex = priceHistory.length - 1;
-            
-            const pred3min = intercept + slope * (currentIndex + 180);
-            updatePredictionUI('3min', pred3min);
-            
-            const pred10min = intercept + slope * (currentIndex + 600);
-            updatePredictionUI('10min', pred10min);
-            
-            const pred30min = intercept + slope * (currentIndex + 1800);
-            updatePredictionUI('30min', pred30min);
-        }
-
-        function updatePredictionUI(timeframe, predictedPrice) {
-            const priceElement = document.getElementById(`prediction${timeframe}`);
-            const diffElement = document.getElementById(`diff${timeframe}`);
-            const trendElement = document.getElementById(`trend${timeframe}`);
-            
-            priceElement.textContent = predictedPrice.toFixed(4);
-            
-            const diff = predictedPrice - liveRate;
-            const diffPercent = (diff / liveRate * 100).toFixed(2);
-            
-            if (diff > 0.001) {
-                diffElement.textContent = `▲ +${diff.toFixed(4)} (+${diffPercent}%)`;
-                diffElement.className = 'prediction-diff up';
-                trendElement.textContent = '上昇';
-                trendElement.className = 'prediction-trend up';
-            } else if (diff < -0.001) {
-                diffElement.textContent = `▼ ${diff.toFixed(4)} (${diffPercent}%)`;
-                diffElement.className = 'prediction-diff down';
-                trendElement.textContent = '下降';
-                trendElement.className = 'prediction-trend down';
-            } else {
-                diffElement.textContent = `→ ${diff.toFixed(4)} (${diffPercent}%)`;
-                diffElement.className = 'prediction-diff neutral';
-                trendElement.textContent = '横ばい';
-                trendElement.className = 'prediction-trend neutral';
-            }
+            return { min3, min10, min30, min60 };
         }
 
         // ========================================
-        // チャート更新（Y軸オートスケール）
+        // アルゴリズム予測エンジン（詳細分析）
         // ========================================
-        function updateChart() {
-            if (priceHistory.length === 0) return;
-            
-            const labels = priceHistory.map(item => item.time);
-            const prices = priceHistory.map(item => item.price);
-            
-            const { slope, intercept } = linearRegression(priceHistory.slice(-30));
-            const currentIndex = priceHistory.length - 1;
-            const futurePrices = [];
-            const futureLabels = [];
-            
-            for (let i = 1; i <= 30; i++) {
-                const futurePrice = intercept + slope * (currentIndex + i);
-                futurePrices.push(futurePrice);
-                futureLabels.push('');
+        function generateTechnicalAnalysis() {
+            if (priceHistory.length < 14) {
+                return {
+                    trend: 'データ不足',
+                    strength: '判定不可',
+                    predictions: {},
+                    commentary: 'データが不足しているため、分析できません。しばらくお待ちください。'
+                };
             }
             
-            // Y軸の範囲を自動調整（現在価格±0.05）
-            const currentPrice = liveRate;
-            const yMin = currentPrice - 0.05;
-            const yMax = currentPrice + 0.05;
+            const rsi = calculateRSI(priceHistory);
+            const macd = calculateMACD(priceHistory);
+            const bb = calculateBollingerBands(priceHistory);
+            const predictions = calculatePredictions(priceHistory, liveRate);
             
-            if (chart) {
-                chart.data.labels = [...labels, ...futureLabels];
-                chart.data.datasets[0].data = prices;
-                chart.data.datasets[1].data = [...Array(prices.length - 1).fill(null), prices[prices.length - 1], ...futurePrices];
-                chart.options.scales.y.min = yMin;
-                chart.options.scales.y.max = yMax;
-                chart.update('none');
+            // トレンド判定
+            let trend = '';
+            let trendStrength = '';
+            let commentary = '';
+            
+            // RSIベースの判定
+            if (rsi > 70) {
+                trend = '過熱';
+                trendStrength = '買われすぎ';
+                commentary = 'RSIが70を超えており、買われすぎの状態です。短期的には反落の可能性があります。';
+            } else if (rsi < 30) {
+                trend = '売られすぎ';
+                trendStrength = '反発期待';
+                commentary = 'RSIが30を下回っており、売られすぎの状態です。反発の可能性が高まっています。';
+            } else if (rsi >= 50) {
+                trend = '上昇局面';
+                trendStrength = '強気';
+                commentary = 'RSIが50以上で推移しており、上昇トレンドが継続しています。';
             } else {
-                const ctx = document.getElementById('trendChart').getContext('2d');
-                chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: [...labels, ...futureLabels],
-                        datasets: [
-                            {
-                                label: '過去レート',
-                                data: prices,
-                                borderColor: '#00ff88',
-                                backgroundColor: 'rgba(0, 255, 136, 0.15)',
-                                borderWidth: 3,
-                                tension: 0.4,
-                                pointRadius: 0,
-                                pointHoverRadius: 6
-                            },
-                            {
-                                label: '予測レート',
-                                data: [...Array(prices.length - 1).fill(null), prices[prices.length - 1], ...futurePrices],
-                                borderColor: '#ffd700',
-                                backgroundColor: 'rgba(255, 215, 0, 0.15)',
-                                borderWidth: 3,
-                                borderDash: [8, 8],
-                                tension: 0.4,
-                                pointRadius: 0,
-                                pointHoverRadius: 6
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                position: 'top',
-                                labels: {
-                                    color: '#ffffff',
-                                    font: { size: 13, weight: 'bold' }
-                                }
-                            },
-                            tooltip: {
-                                mode: 'index',
-                                intersect: false,
-                                backgroundColor: 'rgba(15, 23, 42, 0.98)',
-                                titleColor: '#00ffff',
-                                bodyColor: '#ffffff',
-                                borderColor: 'rgba(0, 255, 255, 0.6)',
-                                borderWidth: 2
-                            }
-                        },
-                        scales: {
-                            x: {
-                                display: false
-                            },
-                            y: {
-                                min: yMin,
-                                max: yMax,
-                                ticks: {
-                                    color: '#ffffff',
-                                    font: { size: 12, family: 'Courier New', weight: 'bold' },
-                                    callback: function(value) {
-                                        return value.toFixed(4);
-                                    }
-                                },
-                                grid: {
-                                    color: 'rgba(0, 255, 255, 0.2)'
-                                }
-                            }
-                        },
-                        interaction: {
-                            mode: 'nearest',
-                            axis: 'x',
-                            intersect: false
-                        }
-                    }
-                });
+                trend = '下降局面';
+                trendStrength = '弱気';
+                commentary = 'RSIが50を下回っており、下降トレンドが見られます。';
             }
+            
+            // MACDベースの追加判定
+            if (macd > 0) {
+                commentary += ' MACDがプラス圏にあり、上昇モメンタムが確認されます。';
+            } else {
+                commentary += ' MACDがマイナス圏にあり、下降モメンタムが見られます。';
+            }
+            
+            // ボリンジャーバンドベースの追加判定
+            if (bb) {
+                const upperDist = bb.upper - liveRate;
+                const lowerDist = liveRate - bb.lower;
+                
+                if (upperDist < bb.width * 0.1) {
+                    commentary += ' 価格がボリンジャーバンドの上限付近にあり、過熱感があります。';
+                } else if (lowerDist < bb.width * 0.1) {
+                    commentary += ' 価格がボリンジャーバンドの下限付近にあり、反発の可能性があります。';
+                } else {
+                    commentary += ' 価格はボリンジャーバンド内で推移しており、安定した動きを見せています。';
+                }
+            }
+            
+            // 時間別の予測コメント
+            const diff60 = predictions.min60 - liveRate;
+            if (diff60 > 0.05) {
+                commentary += ` 1時間後には${predictions.min60.toFixed(4)}円付近まで上昇する可能性があります。`;
+            } else if (diff60 < -0.05) {
+                commentary += ` 1時間後には${predictions.min60.toFixed(4)}円付近まで下落する可能性があります。`;
+            } else {
+                commentary += ` 1時間後も${predictions.min60.toFixed(4)}円付近で横ばいの展開が予想されます。`;
+            }
+            
+            return {
+                trend,
+                trendStrength,
+                rsi: rsi.toFixed(2),
+                macd: macd.toFixed(4),
+                bb: bb ? bb.width.toFixed(4) : 'N/A',
+                predictions,
+                commentary
+            };
+        }
+
+        function showAnalysisModal() {
+            const analysis = generateTechnicalAnalysis();
+            
+            const html = `
+                <div class="analysis-section">
+                    <div class="analysis-title">📊 現在の市場状況</div>
+                    <div class="analysis-content">
+                        <strong>トレンド:</strong> ${analysis.trend} (${analysis.trendStrength})<br>
+                        <strong>RSI (14):</strong> ${analysis.rsi}<br>
+                        <strong>MACD:</strong> ${analysis.macd}<br>
+                        <strong>ボリンジャーバンド幅:</strong> ${analysis.bb}
+                    </div>
+                </div>
+                
+                <div class="analysis-section">
+                    <div class="analysis-title">🔮 予測価格</div>
+                    <table class="prediction-table">
+                        <thead>
+                            <tr>
+                                <th>時間</th>
+                                <th>予測価格</th>
+                                <th>変動</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>3分後</td>
+                                <td>${analysis.predictions.min3.toFixed(4)}</td>
+                                <td>${(analysis.predictions.min3 - liveRate).toFixed(4)}</td>
+                            </tr>
+                            <tr>
+                                <td>10分後</td>
+                                <td>${analysis.predictions.min10.toFixed(4)}</td>
+                                <td>${(analysis.predictions.min10 - liveRate).toFixed(4)}</td>
+                            </tr>
+                            <tr>
+                                <td>30分後</td>
+                                <td>${analysis.predictions.min30.toFixed(4)}</td>
+                                <td>${(analysis.predictions.min30 - liveRate).toFixed(4)}</td>
+                            </tr>
+                            <tr>
+                                <td>60分後 (1時間)</td>
+                                <td>${analysis.predictions.min60.toFixed(4)}</td>
+                                <td>${(analysis.predictions.min60 - liveRate).toFixed(4)}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="analysis-section">
+                    <div class="analysis-title">💡 アナリストコメント</div>
+                    <div class="analysis-content">
+                        ${analysis.commentary}
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('analysisResult').innerHTML = html;
+            document.getElementById('analysisModal').classList.add('active');
         }
 
         // ========================================
@@ -1169,106 +1016,14 @@
             }, 1000);
         }
 
-        // ========================================
-        // 初期化
-        // ========================================
-        async function initialize() {
-            const savedRate = localStorage.getItem('lastRate');
-            if (savedRate) {
-                baseRate = parseFloat(savedRate);
-                liveRate = baseRate;
-                updateCurrentRate();
-            }
-            
-            await fetchExchangeRate();
-            startLiveEmulation();
-            startCountdown();
-            updateLastUpdateTime();
-            
-            updateInterval = setInterval(async () => {
-                await fetchExchangeRate();
-                updateLastUpdateTime();
-                localStorage.setItem('lastRate', baseRate.toString());
-            }, 10000);
-        }
-
         function updateLastUpdateTime() {
             const now = new Date();
-            const timeString = now.toLocaleString('ja-JP', {
-                month: '2-digit',
-                day: '2-digit',
+            const timeString = now.toLocaleTimeString('ja-JP', {
                 hour: '2-digit',
-                minute: '2-digit'
+                minute: '2-digit',
+                second: '2-digit'
             });
             document.getElementById('lastUpdate').textContent = timeString;
-        }
-
-        // ========================================
-        // Gemini API呼び出し（標準fetchのみ、SDK不使用）
-        // ========================================
-        async function callGeminiAPI(apiKey, prompt) {
-            console.log('='.repeat(60));
-            console.log('🤖 Gemini API呼び出し開始');
-            console.log('APIキー:', apiKey ? (apiKey.substring(0, 10) + '...') : 'なし');
-            console.log('='.repeat(60));
-            
-            // エンドポイントを完全にハードコード（gemini-1.5-flash）
-            const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent';
-            const fullUrl = `${url}?key=${apiKey}`;
-            
-            console.log('📤 リクエストURL:', url);
-            console.log('🔑 APIキー付きURL:', fullUrl.substring(0, 100) + '...');
-            
-            const requestBody = {
-                contents: [
-                    {
-                        parts: [
-                            {
-                                text: prompt
-                            }
-                        ]
-                    }
-                ]
-            };
-            
-            console.log('📦 リクエストボディ:', JSON.stringify(requestBody, null, 2).substring(0, 200) + '...');
-            
-            try {
-                const response = await fetch(fullUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(requestBody)
-                });
-                
-                console.log('📥 レスポンスステータス:', response.status, response.statusText);
-                console.log('📥 レスポンスヘッダー:', JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2));
-                
-                const responseText = await response.text();
-                console.log('📥 レスポンステキスト:', responseText.substring(0, 500));
-                
-                if (!response.ok) {
-                    console.error('❌ APIエラー発生');
-                    console.error('ステータス:', response.status);
-                    console.error('テキスト:', responseText);
-                    throw new Error(`APIエラー: ${response.status} ${response.statusText}\n${responseText}`);
-                }
-                
-                const data = JSON.parse(responseText);
-                console.log('✅ JSONパース成功');
-                console.log('データ:', JSON.stringify(data, null, 2).substring(0, 500));
-                console.log('='.repeat(60));
-                
-                return data;
-                
-            } catch (error) {
-                console.error('❌ エラー発生:', error);
-                console.error('エラーメッセージ:', error.message);
-                console.error('エラースタック:', error.stack);
-                console.log('='.repeat(60));
-                throw error;
-            }
         }
 
         // ========================================
@@ -1288,143 +1043,46 @@
             countdown = 10;
         });
 
-        document.getElementById('settingsBtn').addEventListener('click', () => {
-            document.getElementById('settingsModal').classList.add('active');
+        document.getElementById('analysisBtn').addEventListener('click', () => {
+            showAnalysisModal();
         });
 
         document.getElementById('closeModalBtn').addEventListener('click', () => {
-            document.getElementById('settingsModal').classList.remove('active');
+            document.getElementById('analysisModal').classList.remove('active');
         });
 
-        document.getElementById('saveApiKeyBtn').addEventListener('click', () => {
-            const apiKey = document.getElementById('apiKeyInput').value.trim();
-            if (apiKey) {
-                localStorage.setItem('geminiApiKey', apiKey);
-                alert('✅ APIキーを保存しました');
-                document.getElementById('settingsModal').classList.remove('active');
-            } else {
-                alert('⚠️ APIキーを入力してください');
+        // モーダルの外側をクリックしたら閉じる
+        document.getElementById('analysisModal').addEventListener('click', (e) => {
+            if (e.target.id === 'analysisModal') {
+                document.getElementById('analysisModal').classList.remove('active');
             }
         });
 
-        document.getElementById('deleteApiKeyBtn').addEventListener('click', () => {
-            if (confirm('APIキーを削除しますか？')) {
-                localStorage.removeItem('geminiApiKey');
-                document.getElementById('apiKeyInput').value = '';
-                alert('✅ APIキーを削除しました');
-            }
-        });
-
-        document.getElementById('aiAnalyzeBtn').addEventListener('click', async () => {
-            // ハードコードAPIキーを優先、なければLocalStorageから取得
-            let apiKey = HARDCODED_API_KEY || localStorage.getItem('geminiApiKey');
-            
-            if (!apiKey) {
-                alert('⚠️ Gemini APIキーを設定してください\n\n設定方法:\n1. Google AI Studio (https://ai.google.dev/) にアクセス\n2. APIキーを取得\n3. 設定ボタン（⚙️）からAPIキーを保存\n\nまたは、コード内の HARDCODED_API_KEY に直接貼り付けてください');
-                document.getElementById('settingsModal').classList.add('active');
-                return;
+        // ========================================
+        // 初期化
+        // ========================================
+        async function init() {
+            // LocalStorageから前回値を取得
+            const savedRate = localStorage.getItem('lastRate');
+            const savedPair = localStorage.getItem('lastPair');
+            if (savedRate && savedPair === currentPair) {
+                baseRate = parseFloat(savedRate);
+                liveRate = baseRate;
+                updateCurrentRate();
             }
             
-            console.log('🤖 AI分析開始...');
-            console.log('APIキーソース:', HARDCODED_API_KEY ? 'ハードコード' : 'LocalStorage');
+            await fetchExchangeRate();
+            startCountdown();
             
-            document.getElementById('loadingOverlay').classList.add('active');
-            
-            try {
-                const rsi = calculateRSI(priceHistory);
-                const macd = calculateMACD(priceHistory);
-                const bb = calculateBollingerBands(priceHistory);
-                
-                const prompt = `あなたはプロのFXトレーダーです。以下の現在価格とテクニカル指標に基づき、3分後、10分後、30分後の${currentPair}の価格変動を予測してください。
-
-現在価格: ${liveRate.toFixed(4)}
-RSI(14): ${rsi ? rsi.toFixed(2) : 'N/A'}
-MACD: ${macd ? macd.toFixed(4) : 'N/A'}
-ボリンジャーバンド幅: ${bb ? bb.width.toFixed(4) : 'N/A'}
-
-回答は以下のJSON形式のみで行ってください：
-{
-  "prediction_3min": "価格",
-  "reasoning_3min": "短い根拠（一言で）",
-  "prediction_10min": "価格",
-  "prediction_30min": "価格",
-  "trend_strength": "強い上昇/弱い上昇/レンジ/弱い下降/強い下降",
-  "advice": "トレーダーへの一言アドバイス（日本語で）"
-}
-
-感情論は排除し、数値に基づいた論理的な推論を行ってください。`;
-
-                // 標準fetchのみでAPI呼び出し
-                const data = await callGeminiAPI(apiKey, prompt);
-                console.log('✅ API呼び出し成功');
-                
-                console.log('✅ データ取得成功:', data);
-                
-                if (data.candidates && data.candidates[0]) {
-                    const text = data.candidates[0].content.parts[0].text;
-                    console.log('📄 AI応答テキスト:', text);
-                    
-                    const jsonMatch = text.match(/\{[\s\S]*\}/);
-                    
-                    if (jsonMatch) {
-                        const result = JSON.parse(jsonMatch[0]);
-                        console.log('✅ JSON解析成功:', result);
-                        
-                        const resultHTML = `
-                            <p><strong>🎯 予測価格:</strong></p>
-                            <p>3分後: ${result.prediction_3min} (${result.reasoning_3min})</p>
-                            <p>10分後: ${result.prediction_10min}</p>
-                            <p>30分後: ${result.prediction_30min}</p>
-                            <p><strong>📊 トレンド強度:</strong> ${result.trend_strength}</p>
-                            <p><strong>💡 アドバイス:</strong> ${result.advice}</p>
-                        `;
-                        
-                        document.getElementById('aiResultContent').innerHTML = resultHTML;
-                        document.getElementById('aiResult').classList.add('active');
-                        
-                        console.log('🎉 AI分析完了');
-                    } else {
-                        throw new Error('JSON形式の解析に失敗しました\n\nAIの応答がJSON形式ではありませんでした');
-                    }
-                } else {
-                    throw new Error('AI分析に失敗しました\n\nレスポンスにcandidatesが含まれていません');
-                }
-            } catch (error) {
-                console.error('❌ AI分析エラー:', error);
-                
-                let userMessage = '❌ AI分析に失敗しました\n\n';
-                
-                if (error.message.includes('Failed to fetch')) {
-                    userMessage += '【原因】ネットワークエラー\n【対処】インターネット接続を確認してください';
-                } else if (error.message.includes('404')) {
-                    userMessage += '【原因】モデルが見つかりません (404エラー)\n【対処】APIキーを確認するか、しばらく待ってから再試行してください\n\n【詳細】gemini-pro と gemini-1.5-flash の両方で404エラーが発生しました';
-                } else if (error.message.includes('400')) {
-                    userMessage += '【原因】リクエストが不正です (400エラー)\n【対処】APIキーを確認してください';
-                } else if (error.message.includes('401')) {
-                    userMessage += '【原因】APIキーが無効です (401エラー)\n【対処】正しいAPIキーを設定してください';
-                } else if (error.message.includes('403')) {
-                    userMessage += '【原因】APIキーに権限がありません (403エラー)\n【対処】Google AI StudioでAPIキーを再作成してください';
-                } else if (error.message.includes('429')) {
-                    userMessage += '【原因】リクエスト制限を超えました (429エラー)\n【対処】しばらく待ってから再試行してください';
-                } else {
-                    userMessage += `【エラー詳細】\n${error.message}`;
-                }
-                
-                alert(userMessage);
-            } finally {
-                document.getElementById('loadingOverlay').classList.remove('active');
-            }
-        });
-
-        // APIキーの読み込み
-        const savedApiKey = localStorage.getItem('geminiApiKey');
-        if (savedApiKey) {
-            document.getElementById('apiKeyInput').value = savedApiKey;
-            console.log('✅ 保存されたAPIキーを読み込みました');
+            // 10秒ごとに自動更新
+            if (updateInterval) clearInterval(updateInterval);
+            updateInterval = setInterval(async () => {
+                await fetchExchangeRate();
+            }, 10000);
         }
 
-        // 初期化実行
-        initialize();
+        // ページ読み込み時に初期化
+        init();
     </script>
 </body>
 </html>
