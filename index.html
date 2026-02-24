@@ -1,1088 +1,549 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>FX価格予測 - リアルタイム為替予測</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CrowdSense Pro - マイクロロケーション混雑予測AIシステム</title>
+  <meta name="description" content="店舗・施設管理者向けB2B混雑予測AIシステム。天気・イベントを組み合わせた高精度予測でシフト・ダイナミックプライシングを最適化。">
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-            color: #ffffff;
-            min-height: 100vh;
-            padding: 20px;
-        }
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        h1 {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            background: linear-gradient(135deg, #00f5ff 0%, #00d4ff 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .live-indicator {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            color: #10b981;
-            margin-top: 10px;
-        }
-
-        .live-dot {
-            width: 12px;
-            height: 12px;
-            background: #10b981;
-            border-radius: 50%;
-            animation: pulse 2s ease-in-out infinite;
-            box-shadow: 0 0 10px #10b981;
-        }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
-        }
-
-        .card {
-            background: rgba(30, 41, 59, 0.8);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 20px;
-            border: 1px solid rgba(0, 245, 255, 0.2);
-            backdrop-filter: blur(10px);
-        }
-
-        .card-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 20px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            color: #ffffff;
-        }
-
-        .currency-selector {
-            width: 100%;
-            padding: 12px;
-            font-size: 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(0, 245, 255, 0.3);
-            background: rgba(15, 23, 42, 0.8);
-            color: #ffffff;
-            cursor: pointer;
-        }
-
-        .current-rate {
-            text-align: center;
-            padding: 30px 0;
-        }
-
-        .rate-label {
-            font-size: 18px;
-            color: #ffffff;
-            margin-bottom: 10px;
-            font-weight: 600;
-        }
-
-        .rate-value {
-            font-size: 64px;
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .technical-indicators {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .indicator {
-            background: rgba(15, 23, 42, 0.6);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid rgba(0, 245, 255, 0.2);
-        }
-
-        .indicator-label {
-            font-size: 14px;
-            color: #ffffff;
-            margin-bottom: 8px;
-            font-weight: 600;
-        }
-
-        .indicator-value {
-            font-size: 24px;
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
-            color: #00f5ff;
-        }
-
-        .predictions {
-            display: grid;
-            gap: 15px;
-        }
-
-        .prediction-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 8px;
-            border: 1px solid rgba(251, 191, 36, 0.3);
-        }
-
-        .prediction-label {
-            font-size: 28px;
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .prediction-value {
-            text-align: right;
-        }
-
-        .prediction-price {
-            font-size: 30px;
-            font-weight: 700;
-            font-family: 'Courier New', monospace;
-            color: #fbbf24;
-            margin-bottom: 5px;
-        }
-
-        .prediction-diff {
-            font-size: 16px;
-            font-weight: 600;
-        }
-
-        .prediction-diff.up {
-            color: #10b981;
-        }
-
-        .prediction-diff.down {
-            color: #ef4444;
-        }
-
-        .prediction-diff.neutral {
-            color: #94a3b8;
-        }
-
-        .chart-container {
-            position: relative;
-            height: 300px;
-            margin-top: 20px;
-        }
-
-        .controls {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .control-btn {
-            padding: 16px 24px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 8px;
-            border: none;
-            cursor: pointer;
-            transition: all 0.3s;
-            background: linear-gradient(135deg, #00f5ff 0%, #00d4ff 100%);
-            color: #0f172a;
-        }
-
-        .control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(0, 245, 255, 0.3);
-        }
-
-        .control-btn.analysis-btn {
-            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-        }
-
-        .status {
-            display: flex;
-            justify-content: space-around;
-            padding: 15px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 8px;
-            font-size: 14px;
-            color: #94a3b8;
-        }
-
-        .status-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        footer {
-            text-align: center;
-            margin-top: 30px;
-            padding: 20px;
-            color: #64748b;
-            font-size: 14px;
-        }
-
-        footer a {
-            color: #00f5ff;
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
-        }
-
-        /* モーダル */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            border-radius: 16px;
-            padding: 30px;
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            overflow-y: auto;
-            border: 2px solid rgba(251, 191, 36, 0.5);
-            position: relative;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
-            font-size: 24px;
-            cursor: pointer;
-            transition: all 0.3s;
-        }
-
-        .close-btn:hover {
-            background: rgba(239, 68, 68, 0.4);
-            transform: rotate(90deg);
-        }
-
-        .modal-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            color: #fbbf24;
-        }
-
-        .analysis-section {
-            margin-bottom: 20px;
-            padding: 20px;
-            background: rgba(15, 23, 42, 0.6);
-            border-radius: 8px;
-            border-left: 4px solid #fbbf24;
-        }
-
-        .analysis-title {
-            font-size: 18px;
-            font-weight: 600;
-            margin-bottom: 10px;
-            color: #ffffff;
-        }
-
-        .analysis-content {
-            font-size: 16px;
-            line-height: 1.6;
-            color: #e2e8f0;
-        }
-
-        .prediction-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .prediction-table th,
-        .prediction-table td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-        }
-
-        .prediction-table th {
-            background: rgba(251, 191, 36, 0.1);
-            color: #fbbf24;
-            font-weight: 600;
-        }
-
-        .prediction-table td {
-            color: #e2e8f0;
-            font-family: 'Courier New', monospace;
-        }
-
-        @media (max-width: 600px) {
-            h1 {
-                font-size: 24px;
-            }
-
-            .rate-value {
-                font-size: 48px;
-            }
-
-            .prediction-label {
-                font-size: 20px;
-            }
-
-            .prediction-price {
-                font-size: 24px;
-            }
-
-            .controls {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+  <!-- Dashboard CSS -->
+  <link rel="stylesheet" href="css/dashboard.css">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>📊 FX価格予測</h1>
-            <div class="live-indicator">
-                <div class="live-dot"></div>
-                <span>LIVE</span>
-            </div>
-        </header>
+<div id="app">
 
-        <div class="card">
-            <div class="card-title">
-                <span>💱</span>
-                <span>通貨ペア選択</span>
+  <!-- ========== SIDEBAR ========== -->
+  <aside id="sidebar" class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo">
+        <div class="logo-icon">CS</div>
+        <div class="logo-text">
+          <span class="logo-title">CrowdSense</span>
+          <span class="logo-subtitle">Pro B2B</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">施設</div>
+      <div id="facility-list" class="facility-list"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">ゾーン</div>
+      <div id="zone-list" class="zone-list"></div>
+    </div>
+
+    <div class="sidebar-section">
+      <div class="sidebar-label">クイックアクション</div>
+      <button id="btn-generate-dummy" class="sidebar-btn primary">📊 テストデータ生成</button>
+      <button id="btn-run-prediction" class="sidebar-btn">🔮 予測を実行</button>
+      <button id="btn-export-data" class="sidebar-btn">📥 データエクスポート</button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="status-indicator">
+        <div class="status-dot active"></div>
+        <span>システム正常稼働中</span>
+      </div>
+      <div class="last-updated">最終更新: <span id="last-update-time">--:--</span></div>
+    </div>
+  </aside>
+
+  <!-- ========== MAIN CONTENT ========== -->
+  <div id="main-content" class="main-content">
+
+    <!-- HEADER -->
+    <header class="main-header">
+      <div class="header-left">
+        <button id="sidebar-toggle" class="sidebar-toggle">☰</button>
+        <div class="facility-info">
+          <h1 id="current-facility-name">読み込み中...</h1>
+          <span id="current-datetime" class="current-datetime"></span>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="alert-badge" id="alert-badge" onclick="app.switchTab('alerts')">
+          <span class="alert-icon">🔔</span>
+          <span id="alert-count" class="alert-count">0</span>
+        </div>
+        <div class="weather-widget" id="weather-widget">
+          <span id="weather-icon">⏳</span>
+          <span id="weather-temp">--°C</span>
+          <span id="weather-desc">取得中...</span>
+        </div>
+        <button id="btn-settings" class="icon-btn" title="設定">⚙️</button>
+      </div>
+    </header>
+
+    <!-- TAB NAVIGATION -->
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="dashboard">📊 ダッシュボード</button>
+      <button class="tab-btn" data-tab="prediction">🔮 予測分析</button>
+      <button class="tab-btn" data-tab="data">📋 データ管理</button>
+      <button class="tab-btn" data-tab="alerts">
+        🔔 アラート
+        <span id="unread-badge" class="unread-badge hidden">0</span>
+      </button>
+    </nav>
+
+    <!-- ============================
+         TAB: DASHBOARD
+         ============================ -->
+    <div id="tab-dashboard" class="tab-panel active">
+
+      <!-- SUMMARY CARDS -->
+      <div class="summary-cards">
+        <div class="summary-card">
+          <div class="card-icon">👥</div>
+          <div class="card-body">
+            <div class="card-value" id="current-crowding">--</div>
+            <div class="card-label">現在の混雑度（選択ゾーン）</div>
+          </div>
+          <div class="card-trend" id="crowding-trend">--</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">🔮</div>
+          <div class="card-body">
+            <div class="card-value" id="next-peak-time">--:--</div>
+            <div class="card-label">次のピーク時刻</div>
+          </div>
+          <div class="card-detail" id="next-peak-level">予測: --%</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">⚠️</div>
+          <div class="card-body">
+            <div class="card-value" id="active-alerts">0</div>
+            <div class="card-label">未読アラート件数</div>
+          </div>
+          <div class="card-detail">要対応事項</div>
+        </div>
+        <div class="summary-card">
+          <div class="card-icon">🌤</div>
+          <div class="card-body">
+            <div class="card-value" id="weather-impact">--</div>
+            <div class="card-label">天気による来客増減</div>
+          </div>
+          <div class="card-detail" id="weather-impact-detail">取得中...</div>
+        </div>
+      </div>
+
+      <!-- ALERT BANNER -->
+      <div id="alert-banner" class="alert-banner hidden">
+        <div class="alert-banner-icon">⚠️</div>
+        <div class="alert-banner-content">
+          <div class="alert-banner-title" id="alert-banner-title"></div>
+          <div class="alert-banner-message" id="alert-banner-message"></div>
+        </div>
+        <button class="alert-banner-close" onclick="this.parentElement.classList.add('hidden')">✕</button>
+      </div>
+
+      <!-- FLOOR PLAN + TREND CHART -->
+      <div class="dashboard-grid">
+
+        <!-- Floor Plan Heatmap -->
+        <div class="panel floor-plan-panel">
+          <div class="panel-header">
+            <h2>施設内混雑ヒートマップ</h2>
+            <div class="panel-controls">
+              <span class="panel-subtitle" id="heatmap-time-label">現在のリアルタイム状況</span>
+              <div class="crowding-legend">
+                <span class="legend-item low">低</span>
+                <div class="legend-bar"></div>
+                <span class="legend-item high">高</span>
+              </div>
             </div>
-            <select class="currency-selector" id="currencyPair">
-                <option value="USD/JPY">USD/JPY (米ドル/円)</option>
-                <option value="EUR/USD">EUR/USD (ユーロ/米ドル)</option>
-                <option value="GBP/JPY">GBP/JPY (英ポンド/円)</option>
-                <option value="AUD/JPY">AUD/JPY (豪ドル/円)</option>
-                <option value="EUR/JPY">EUR/JPY (ユーロ/円)</option>
+          </div>
+          <div class="panel-body">
+            <div id="floor-plan-container">
+              <svg id="floor-plan-svg" viewBox="0 0 1000 600"
+                   xmlns="http://www.w3.org/2000/svg" aria-label="施設内フロアプランヒートマップ">
+                <!-- SVGはfloor-plan.jsが動的に生成 -->
+              </svg>
+            </div>
+            <div id="zone-tooltip" class="zone-tooltip hidden">
+              <div class="tooltip-name"></div>
+              <div class="tooltip-level"></div>
+              <div class="tooltip-count"></div>
+              <div class="tooltip-trend"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Today's Trend Chart -->
+        <div class="panel trend-panel">
+          <div class="panel-header">
+            <h2>本日の混雑推移</h2>
+            <select id="trend-zone-select" class="panel-select" title="ゾーン選択"></select>
+          </div>
+          <div class="panel-body">
+            <canvas id="today-trend-chart"></canvas>
+          </div>
+        </div>
+
+      </div><!-- /dashboard-grid -->
+
+      <!-- RECOMMENDATIONS -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>AIレコメンデーション</h2>
+          <span class="panel-subtitle">予測に基づく行動提案（予測を実行後に表示）</span>
+        </div>
+        <div class="panel-body">
+          <div id="recommendations-list" class="recommendations-list">
+            <div class="empty-state">
+              <div class="empty-icon">🤖</div>
+              <p>予測タブから「予測実行」ボタンを押してください</p>
+              <small>天気・イベント・曜日パターンを組み合わせた提案が生成されます</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-dashboard -->
+
+    <!-- ============================
+         TAB: PREDICTION
+         ============================ -->
+    <div id="tab-prediction" class="tab-panel">
+
+      <!-- Controls -->
+      <div class="prediction-controls">
+        <div class="control-group">
+          <label>対象ゾーン</label>
+          <select id="pred-zone-select" class="control-select"></select>
+        </div>
+        <div class="control-group">
+          <label>予測対象日</label>
+          <input type="date" id="pred-date" class="control-input">
+        </div>
+        <button id="btn-run-pred" class="btn-primary">🔮 予測実行</button>
+      </div>
+
+      <!-- 24h Prediction Chart -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>時間帯別混雑予測（24時間）</h2>
+          <div class="confidence-badge">信頼度: <span id="pred-confidence">--</span>%</div>
+        </div>
+        <div class="panel-body" style="height:280px">
+          <canvas id="prediction-chart" style="height:250px"></canvas>
+        </div>
+      </div>
+
+      <!-- Factor Grid -->
+      <div class="factor-grid">
+
+        <!-- Radar Chart -->
+        <div class="panel factor-panel">
+          <div class="panel-header">
+            <h2>影響因子分析</h2>
+          </div>
+          <div class="panel-body">
+            <div id="factor-chart-container" style="height:180px">
+              <canvas id="factor-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Weather Forecast -->
+        <div class="panel factor-panel">
+          <div class="panel-header">
+            <h2>天気予報影響</h2>
+            <span class="panel-subtitle">Open-Meteo API</span>
+          </div>
+          <div class="panel-body">
+            <div id="weather-forecast-list" class="weather-forecast-list">
+              <div class="empty-state"><p>予測実行後に表示されます</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Events -->
+        <div class="panel factor-panel">
+          <div class="panel-header">
+            <h2>周辺イベント情報</h2>
+            <span class="panel-subtitle">来客影響あり</span>
+          </div>
+          <div class="panel-body">
+            <div id="event-list" class="event-list">
+              <div class="empty-state"><p>予測実行後に表示されます</p></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /factor-grid -->
+
+      <!-- AI Action Recommendations -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>AIアクション提案</h2>
+          <span class="ai-badge">AI生成</span>
+        </div>
+        <div class="panel-body">
+          <div id="ai-recommendations" class="ai-recommendations">
+            <div class="empty-state">
+              <div class="empty-icon">🔮</div>
+              <p>ゾーンを選択して「予測実行」を押してください</p>
+              <small>シフト調整・タイムセール等のアクションが提案されます</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-prediction -->
+
+    <!-- ============================
+         TAB: DATA MANAGEMENT
+         ============================ -->
+    <div id="tab-data" class="tab-panel">
+
+      <div class="data-grid">
+
+        <!-- Manual Entry -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2>混雑データ入力</h2>
+            <span class="panel-subtitle">実測値を手動入力</span>
+          </div>
+          <div class="panel-body">
+            <form id="data-entry-form" class="data-form">
+              <div class="form-group">
+                <label>ゾーン</label>
+                <select id="entry-zone" class="form-control" required></select>
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label>日時</label>
+                  <input type="datetime-local" id="entry-datetime" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label>混雑度 (0〜100%)</label>
+                  <input type="number" id="entry-level" class="form-control" min="0" max="100" placeholder="例: 75" required>
+                </div>
+              </div>
+              <div class="form-group">
+                <label>来客数（任意）</label>
+                <input type="number" id="entry-count" class="form-control" min="0" placeholder="推定人数">
+              </div>
+              <div class="form-group">
+                <label>備考</label>
+                <textarea id="entry-notes" class="form-control" rows="2" placeholder="特記事項（イベント、天気など）"></textarea>
+              </div>
+              <button type="submit" class="btn-primary full-width">💾 データを保存</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Dummy Generator -->
+        <div class="panel">
+          <div class="panel-header">
+            <h2>テストデータ生成</h2>
+            <span class="panel-subtitle">開発・デモ用ダミーデータ</span>
+          </div>
+          <div class="panel-body">
+            <div class="dummy-config">
+              <div class="form-group">
+                <label>生成期間</label>
+                <select id="dummy-period" class="form-control">
+                  <option value="7">7日間</option>
+                  <option value="30" selected>30日間</option>
+                  <option value="90">90日間（大量データ）</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>施設タイプ</label>
+                <select id="dummy-facility-type" class="form-control">
+                  <option value="mall">ショッピングモール</option>
+                  <option value="supermarket">スーパーマーケット</option>
+                  <option value="station">駅構内商業施設</option>
+                </select>
+              </div>
+              <div class="dummy-options">
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dummy-include-events" checked>
+                  イベント効果を含める
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dummy-include-weather" checked>
+                  天気変動パターンを含める
+                </label>
+                <label class="checkbox-label">
+                  <input type="checkbox" id="dummy-include-holidays" checked>
+                  祝日効果を含める
+                </label>
+              </div>
+              <button id="btn-generate" class="btn-primary full-width">📊 テストデータを生成</button>
+              <button id="btn-clear-data" class="btn-danger full-width">🗑️ 全データを削除</button>
+            </div>
+            <div id="generation-result" class="generation-result hidden"></div>
+          </div>
+        </div>
+
+      </div><!-- /data-grid -->
+
+      <!-- Data Table -->
+      <div class="panel">
+        <div class="panel-header">
+          <h2>記録データ一覧</h2>
+          <div class="panel-controls">
+            <select id="table-zone-filter" class="panel-select">
+              <option value="">全ゾーン</option>
             </select>
+            <input type="date" id="table-date-filter" class="panel-date" title="日付フィルター">
+          </div>
+        </div>
+        <div class="panel-body">
+          <div class="data-table-container">
+            <table id="data-table" class="data-table">
+              <thead>
+                <tr>
+                  <th>日時</th>
+                  <th>ゾーン</th>
+                  <th>混雑度</th>
+                  <th>来客数</th>
+                  <th>備考</th>
+                </tr>
+              </thead>
+              <tbody id="data-table-body">
+                <tr><td colspan="5" class="empty-cell">データがありません。テストデータを生成してください。</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="table-pagination">
+            <button id="btn-prev-page" class="page-btn" disabled>← 前</button>
+            <span id="page-info" class="page-info">1 / 1</span>
+            <button id="btn-next-page" class="page-btn">次 →</button>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /tab-data -->
+
+    <!-- ============================
+         TAB: ALERTS
+         ============================ -->
+    <div id="tab-alerts" class="tab-panel">
+      <div class="alerts-layout">
+
+        <!-- Alert Settings -->
+        <div class="panel alert-settings-panel">
+          <div class="panel-header">
+            <h2>アラート閾値設定</h2>
+          </div>
+          <div class="panel-body">
+            <div class="threshold-settings">
+              <div class="threshold-item">
+                <div class="threshold-label">
+                  <span class="threshold-icon">🔴</span> 高混雑アラート閾値
+                </div>
+                <div class="threshold-control">
+                  <input type="range" id="threshold-high" min="50" max="100" value="80" class="range-input">
+                  <span id="threshold-high-value" class="range-value">80%</span>
+                </div>
+              </div>
+              <div class="threshold-item">
+                <div class="threshold-label">
+                  <span class="threshold-icon">🟢</span> 低混雑アラート閾値
+                </div>
+                <div class="threshold-control">
+                  <input type="range" id="threshold-low" min="0" max="50" value="20" class="range-input">
+                  <span id="threshold-low-value" class="range-value">20%</span>
+                </div>
+              </div>
+              <div class="threshold-item">
+                <div class="threshold-label">
+                  <span class="threshold-icon">🌧</span> 天気影響アラート閾値
+                </div>
+                <div class="threshold-control">
+                  <input type="range" id="threshold-weather" min="5" max="50" value="20" class="range-input">
+                  <span id="threshold-weather-value" class="range-value">20%変動</span>
+                </div>
+              </div>
+            </div>
+            <button id="btn-save-thresholds" class="btn-primary full-width" style="margin-top:16px">💾 設定を保存</button>
+          </div>
         </div>
 
-        <div class="card">
-            <div class="card-title">
-                <span>💹</span>
-                <span>現在レート</span>
+        <!-- Alert History -->
+        <div class="panel alert-history-panel">
+          <div class="panel-header">
+            <h2>アラート履歴</h2>
+            <button id="btn-mark-all-read" class="btn-secondary">全て既読にする</button>
+          </div>
+          <div class="panel-body">
+            <div id="alert-list" class="alert-list">
+              <div class="empty-state">
+                <div class="empty-icon">🔔</div>
+                <p>アラートはありません</p>
+                <small>予測を実行するとアラートが自動生成されます</small>
+              </div>
             </div>
-            <div class="current-rate">
-                <div class="rate-label">現在価格</div>
-                <div class="rate-value" id="currentRate">---</div>
-            </div>
-
-            <div class="technical-indicators">
-                <div class="indicator">
-                    <div class="indicator-label">RSI (14)</div>
-                    <div class="indicator-value" id="rsiValue">--</div>
-                </div>
-                <div class="indicator">
-                    <div class="indicator-label">MACD</div>
-                    <div class="indicator-value" id="macdValue">--</div>
-                </div>
-                <div class="indicator">
-                    <div class="indicator-label">BB幅</div>
-                    <div class="indicator-value" id="bbValue">--</div>
-                </div>
-            </div>
+          </div>
         </div>
 
-        <div class="card">
-            <div class="card-title">
-                <span>🔮</span>
-                <span>価格予測</span>
-            </div>
-            <div class="predictions">
-                <div class="prediction-item">
-                    <div class="prediction-label">3分後</div>
-                    <div class="prediction-value">
-                        <div class="prediction-price" id="prediction3min">---</div>
-                        <div class="prediction-diff neutral" id="diff3min">--</div>
-                    </div>
-                </div>
-                <div class="prediction-item">
-                    <div class="prediction-label">10分後</div>
-                    <div class="prediction-value">
-                        <div class="prediction-price" id="prediction10min">---</div>
-                        <div class="prediction-diff neutral" id="diff10min">--</div>
-                    </div>
-                </div>
-                <div class="prediction-item">
-                    <div class="prediction-label">30分後</div>
-                    <div class="prediction-value">
-                        <div class="prediction-price" id="prediction30min">---</div>
-                        <div class="prediction-diff neutral" id="diff30min">--</div>
-                    </div>
-                </div>
-                <div class="prediction-item">
-                    <div class="prediction-label">60分後 (1時間)</div>
-                    <div class="prediction-value">
-                        <div class="prediction-price" id="prediction60min">---</div>
-                        <div class="prediction-diff neutral" id="diff60min">--</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+      </div>
+    </div><!-- /tab-alerts -->
 
-        <div class="card">
-            <div class="card-title">
-                <span>📊</span>
-                <span>トレンドグラフ</span>
-            </div>
-            <div class="chart-container">
-                <canvas id="trendChart"></canvas>
-            </div>
-        </div>
+  </div><!-- /main-content -->
+</div><!-- /app -->
 
-        <div class="controls">
-            <button class="control-btn" id="refreshBtn">🔄 今すぐ更新</button>
-            <button class="control-btn analysis-btn" id="analysisBtn">📈 詳細テクニカル分析</button>
-        </div>
-
-        <div class="status">
-            <div class="status-item">最終更新: <span id="lastUpdate">--</span></div>
-            <div class="status-item">次回更新: <span id="nextUpdate">--</span>秒後</div>
-        </div>
-
-        <footer>
-            <p>データ提供: <a href="https://www.exchangerate-api.com" target="_blank">Exchange Rate API</a></p>
-            <p style="margin-top: 12px;">⚠️ 投資判断は自己責任で行ってください</p>
-        </footer>
+<!-- ========== SETTINGS MODAL ========== -->
+<div id="settings-modal" class="modal hidden">
+  <div class="modal-overlay" onclick="app.closeSettings()"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2>⚙️ システム設定</h2>
+      <button class="modal-close" onclick="app.closeSettings()">✕</button>
     </div>
-
-    <!-- 分析結果モーダル -->
-    <div class="modal" id="analysisModal">
-        <div class="modal-content">
-            <button class="close-btn" id="closeModalBtn">×</button>
-            <div class="modal-title">📈 詳細テクニカル分析結果</div>
-            <div id="analysisResult"></div>
+    <div class="modal-body">
+      <div class="settings-section">
+        <h3>施設情報</h3>
+        <div class="form-group">
+          <label>施設名</label>
+          <input type="text" id="setting-facility-name" class="form-control" placeholder="施設名を入力">
         </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>緯度</label>
+            <input type="number" id="setting-lat" class="form-control" step="0.0001" placeholder="35.6580">
+          </div>
+          <div class="form-group">
+            <label>経度</label>
+            <input type="number" id="setting-lng" class="form-control" step="0.0001" placeholder="139.7016">
+          </div>
+        </div>
+        <small style="color:var(--text-dim);font-size:11px">緯度・経度は天気予報の取得に使用されます</small>
+      </div>
+      <div class="settings-section">
+        <h3>天気API</h3>
+        <p class="settings-note">Open-Meteo API（APIキー不要・無料・7日先予報対応）</p>
+        <div class="api-status" id="weather-api-status">
+          <span class="status-dot active"></span> 接続済み
+        </div>
+      </div>
+      <button id="btn-save-settings" class="btn-primary full-width">💾 設定を保存</button>
     </div>
+  </div>
+</div>
 
-    <script>
-        // ========================================
-        // グローバル変数
-        // ========================================
-        let chart = null;
-        let priceHistory = [];
-        let currentPair = 'USD/JPY';
-        let baseRate = null;
-        let liveRate = null;
-        let updateInterval = null;
-        let countdownInterval = null;
-        let emulationInterval = null;
-        let countdown = 10;
+<!-- ========== TOAST CONTAINER ========== -->
+<div id="toast-container" class="toast-container"></div>
 
-        // ========================================
-        // ライブ・エミュレーション機能（毎秒微動）
-        // ========================================
-        function startLiveEmulation() {
-            if (emulationInterval) clearInterval(emulationInterval);
-            
-            emulationInterval = setInterval(() => {
-                if (baseRate === null) return;
-                
-                // ベース価格に微細なランダム変動を追加（±0.005）
-                const variation = (Math.random() - 0.5) * 0.01;
-                liveRate = baseRate + variation;
-                
-                // 価格履歴に追加（最大60個まで保持）
-                const now = new Date();
-                priceHistory.push({
-                    time: now.toLocaleTimeString('ja-JP'),
-                    price: liveRate
-                });
-                
-                if (priceHistory.length > 60) {
-                    priceHistory.shift();
-                }
-                
-                // UIを更新
-                updateCurrentRate();
-                updateTechnicalIndicators();
-                updatePredictions();
-                updateChart();
-                
-            }, 1000); // 毎秒更新
-        }
+<!-- ========== SCRIPTS ========== -->
+<script src="js/config.js"></script>
+<script src="js/data-manager.js"></script>
+<script src="js/dummy-generator.js"></script>
+<script src="js/weather-client.js"></script>
+<script src="js/event-manager.js"></script>
+<script src="js/prediction-engine.js"></script>
+<script src="js/floor-plan.js"></script>
+<script src="js/chart-manager.js"></script>
+<script src="js/alert-manager.js"></script>
+<script src="js/app.js"></script>
 
-        // ========================================
-        // データ取得
-        // ========================================
-        async function fetchExchangeRate() {
-            try {
-                const [baseCurrency, quoteCurrency] = currentPair.split('/');
-                const response = await fetch(`https://open.er-api.com/v6/latest/${baseCurrency}`);
-                const data = await response.json();
-                
-                if (data.result === 'success') {
-                    baseRate = data.rates[quoteCurrency];
-                    liveRate = baseRate;
-                    
-                    // LocalStorageに保存
-                    localStorage.setItem('lastRate', baseRate);
-                    localStorage.setItem('lastPair', currentPair);
-                    
-                    // ライブエミュレーション開始
-                    startLiveEmulation();
-                    
-                    updateLastUpdateTime();
-                }
-            } catch (error) {
-                console.error('データ取得エラー:', error);
-                
-                // LocalStorageから前回値を取得
-                const savedRate = localStorage.getItem('lastRate');
-                const savedPair = localStorage.getItem('lastPair');
-                if (savedRate && savedPair === currentPair) {
-                    baseRate = parseFloat(savedRate);
-                    liveRate = baseRate;
-                    startLiveEmulation();
-                }
-            }
-        }
-
-        // ========================================
-        // UI更新
-        // ========================================
-        function updateCurrentRate() {
-            if (liveRate === null) return;
-            document.getElementById('currentRate').textContent = liveRate.toFixed(4);
-        }
-
-        function updateTechnicalIndicators() {
-            if (priceHistory.length < 14) {
-                document.getElementById('rsiValue').textContent = '--';
-                document.getElementById('macdValue').textContent = '--';
-                document.getElementById('bbValue').textContent = '--';
-                return;
-            }
-            
-            const rsi = calculateRSI(priceHistory);
-            const macd = calculateMACD(priceHistory);
-            const bb = calculateBollingerBands(priceHistory);
-            
-            document.getElementById('rsiValue').textContent = rsi ? rsi.toFixed(2) : '--';
-            document.getElementById('macdValue').textContent = macd ? macd.toFixed(4) : '--';
-            document.getElementById('bbValue').textContent = bb ? bb.width.toFixed(4) : '--';
-        }
-
-        function updatePredictions() {
-            if (liveRate === null || priceHistory.length < 10) return;
-            
-            // 線形回帰による予測
-            const predictions = calculatePredictions(priceHistory, liveRate);
-            
-            // 3分後
-            document.getElementById('prediction3min').textContent = predictions.min3.toFixed(4);
-            updateDiff('diff3min', predictions.min3, liveRate);
-            
-            // 10分後
-            document.getElementById('prediction10min').textContent = predictions.min10.toFixed(4);
-            updateDiff('diff10min', predictions.min10, liveRate);
-            
-            // 30分後
-            document.getElementById('prediction30min').textContent = predictions.min30.toFixed(4);
-            updateDiff('diff30min', predictions.min30, liveRate);
-            
-            // 60分後
-            document.getElementById('prediction60min').textContent = predictions.min60.toFixed(4);
-            updateDiff('diff60min', predictions.min60, liveRate);
-        }
-
-        function updateDiff(elementId, predictedPrice, currentPrice) {
-            const diff = predictedPrice - currentPrice;
-            const diffPercent = (diff / currentPrice) * 100;
-            const element = document.getElementById(elementId);
-            
-            if (diff > 0) {
-                element.textContent = `▲ ${diff.toFixed(4)} (+${diffPercent.toFixed(2)}%)`;
-                element.className = 'prediction-diff up';
-            } else if (diff < 0) {
-                element.textContent = `▼ ${Math.abs(diff).toFixed(4)} (${diffPercent.toFixed(2)}%)`;
-                element.className = 'prediction-diff down';
-            } else {
-                element.textContent = '→ 横ばい';
-                element.className = 'prediction-diff neutral';
-            }
-        }
-
-        function updateChart() {
-            if (priceHistory.length === 0) return;
-            
-            const labels = priceHistory.map(item => item.time);
-            const prices = priceHistory.map(item => item.price);
-            
-            // 予測データを追加
-            const predictions = calculatePredictions(priceHistory, liveRate);
-            const futureLabels = ['3分後', '10分後', '30分後', '60分後'];
-            const futurePrices = [predictions.min3, predictions.min10, predictions.min30, predictions.min60];
-            
-            // Y軸の範囲を動的に調整（現在価格±0.05）
-            const minPrice = liveRate - 0.05;
-            const maxPrice = liveRate + 0.05;
-            
-            if (chart) {
-                chart.data.labels = [...labels, ...futureLabels];
-                chart.data.datasets[0].data = prices;
-                chart.data.datasets[1].data = [...Array(prices.length).fill(null), ...futurePrices];
-                chart.options.scales.y.min = minPrice;
-                chart.options.scales.y.max = maxPrice;
-                chart.update('none');
-            } else {
-                const ctx = document.getElementById('trendChart').getContext('2d');
-                chart = new Chart(ctx, {
-                    type: 'line',
-                    data: {
-                        labels: [...labels, ...futureLabels],
-                        datasets: [
-                            {
-                                label: '過去レート',
-                                data: prices,
-                                borderColor: '#10b981',
-                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                borderWidth: 3,
-                                tension: 0.4,
-                                pointRadius: 0,
-                                pointHoverRadius: 6
-                            },
-                            {
-                                label: '予測レート',
-                                data: [...Array(prices.length).fill(null), ...futurePrices],
-                                borderColor: '#fbbf24',
-                                backgroundColor: 'rgba(251, 191, 36, 0.1)',
-                                borderWidth: 3,
-                                borderDash: [5, 5],
-                                tension: 0.4,
-                                pointRadius: 5,
-                                pointHoverRadius: 8,
-                                pointBackgroundColor: '#fbbf24'
-                            }
-                        ]
-                    },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: true,
-                                labels: {
-                                    color: '#ffffff',
-                                    font: {
-                                        size: 14
-                                    }
-                                }
-                            }
-                        },
-                        scales: {
-                            x: {
-                                ticks: {
-                                    color: '#94a3b8',
-                                    maxRotation: 45,
-                                    minRotation: 45
-                                },
-                                grid: {
-                                    color: 'rgba(148, 163, 184, 0.1)'
-                                }
-                            },
-                            y: {
-                                ticks: {
-                                    color: '#94a3b8'
-                                },
-                                grid: {
-                                    color: 'rgba(148, 163, 184, 0.1)'
-                                },
-                                min: minPrice,
-                                max: maxPrice
-                            }
-                        }
-                    }
-                });
-            }
-        }
-
-        // ========================================
-        // テクニカル指標計算
-        // ========================================
-        function calculateRSI(history, period = 14) {
-            if (history.length < period + 1) return null;
-            
-            const prices = history.map(item => item.price);
-            let gains = 0;
-            let losses = 0;
-            
-            for (let i = prices.length - period; i < prices.length; i++) {
-                const change = prices[i] - prices[i - 1];
-                if (change > 0) {
-                    gains += change;
-                } else {
-                    losses += Math.abs(change);
-                }
-            }
-            
-            const avgGain = gains / period;
-            const avgLoss = losses / period;
-            
-            if (avgLoss === 0) return 100;
-            
-            const rs = avgGain / avgLoss;
-            const rsi = 100 - (100 / (1 + rs));
-            
-            return rsi;
-        }
-
-        function calculateMACD(history) {
-            if (history.length < 26) return null;
-            
-            const prices = history.map(item => item.price);
-            const ema12 = calculateEMA(prices, 12);
-            const ema26 = calculateEMA(prices, 26);
-            
-            return ema12 - ema26;
-        }
-
-        function calculateEMA(prices, period) {
-            const k = 2 / (period + 1);
-            let ema = prices[0];
-            
-            for (let i = 1; i < prices.length; i++) {
-                ema = prices[i] * k + ema * (1 - k);
-            }
-            
-            return ema;
-        }
-
-        function calculateBollingerBands(history, period = 20) {
-            if (history.length < period) return null;
-            
-            const prices = history.slice(-period).map(item => item.price);
-            const mean = prices.reduce((a, b) => a + b, 0) / period;
-            const variance = prices.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / period;
-            const stdDev = Math.sqrt(variance);
-            
-            return {
-                upper: mean + 2 * stdDev,
-                middle: mean,
-                lower: mean - 2 * stdDev,
-                width: 4 * stdDev
-            };
-        }
-
-        // ========================================
-        // 予測計算（線形回帰）
-        // ========================================
-        function calculatePredictions(history, currentRate) {
-            if (history.length < 10) {
-                return {
-                    min3: currentRate,
-                    min10: currentRate,
-                    min30: currentRate,
-                    min60: currentRate
-                };
-            }
-            
-            // 直近10個のデータで線形回帰
-            const recentData = history.slice(-10);
-            const n = recentData.length;
-            let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-            
-            for (let i = 0; i < n; i++) {
-                sumX += i;
-                sumY += recentData[i].price;
-                sumXY += i * recentData[i].price;
-                sumX2 += i * i;
-            }
-            
-            const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-            const intercept = (sumY - slope * sumX) / n;
-            
-            // 予測値を計算（トレンドに基づく）
-            const min3 = intercept + slope * (n + 3);
-            const min10 = intercept + slope * (n + 10);
-            const min30 = intercept + slope * (n + 30);
-            const min60 = intercept + slope * (n + 60);
-            
-            return { min3, min10, min30, min60 };
-        }
-
-        // ========================================
-        // アルゴリズム予測エンジン（詳細分析）
-        // ========================================
-        function generateTechnicalAnalysis() {
-            if (priceHistory.length < 14) {
-                return {
-                    trend: 'データ不足',
-                    strength: '判定不可',
-                    predictions: {},
-                    commentary: 'データが不足しているため、分析できません。しばらくお待ちください。'
-                };
-            }
-            
-            const rsi = calculateRSI(priceHistory);
-            const macd = calculateMACD(priceHistory);
-            const bb = calculateBollingerBands(priceHistory);
-            const predictions = calculatePredictions(priceHistory, liveRate);
-            
-            // トレンド判定
-            let trend = '';
-            let trendStrength = '';
-            let commentary = '';
-            
-            // RSIベースの判定
-            if (rsi > 70) {
-                trend = '過熱';
-                trendStrength = '買われすぎ';
-                commentary = 'RSIが70を超えており、買われすぎの状態です。短期的には反落の可能性があります。';
-            } else if (rsi < 30) {
-                trend = '売られすぎ';
-                trendStrength = '反発期待';
-                commentary = 'RSIが30を下回っており、売られすぎの状態です。反発の可能性が高まっています。';
-            } else if (rsi >= 50) {
-                trend = '上昇局面';
-                trendStrength = '強気';
-                commentary = 'RSIが50以上で推移しており、上昇トレンドが継続しています。';
-            } else {
-                trend = '下降局面';
-                trendStrength = '弱気';
-                commentary = 'RSIが50を下回っており、下降トレンドが見られます。';
-            }
-            
-            // MACDベースの追加判定
-            if (macd > 0) {
-                commentary += ' MACDがプラス圏にあり、上昇モメンタムが確認されます。';
-            } else {
-                commentary += ' MACDがマイナス圏にあり、下降モメンタムが見られます。';
-            }
-            
-            // ボリンジャーバンドベースの追加判定
-            if (bb) {
-                const upperDist = bb.upper - liveRate;
-                const lowerDist = liveRate - bb.lower;
-                
-                if (upperDist < bb.width * 0.1) {
-                    commentary += ' 価格がボリンジャーバンドの上限付近にあり、過熱感があります。';
-                } else if (lowerDist < bb.width * 0.1) {
-                    commentary += ' 価格がボリンジャーバンドの下限付近にあり、反発の可能性があります。';
-                } else {
-                    commentary += ' 価格はボリンジャーバンド内で推移しており、安定した動きを見せています。';
-                }
-            }
-            
-            // 時間別の予測コメント
-            const diff60 = predictions.min60 - liveRate;
-            if (diff60 > 0.05) {
-                commentary += ` 1時間後には${predictions.min60.toFixed(4)}円付近まで上昇する可能性があります。`;
-            } else if (diff60 < -0.05) {
-                commentary += ` 1時間後には${predictions.min60.toFixed(4)}円付近まで下落する可能性があります。`;
-            } else {
-                commentary += ` 1時間後も${predictions.min60.toFixed(4)}円付近で横ばいの展開が予想されます。`;
-            }
-            
-            return {
-                trend,
-                trendStrength,
-                rsi: rsi.toFixed(2),
-                macd: macd.toFixed(4),
-                bb: bb ? bb.width.toFixed(4) : 'N/A',
-                predictions,
-                commentary
-            };
-        }
-
-        function showAnalysisModal() {
-            const analysis = generateTechnicalAnalysis();
-            
-            const html = `
-                <div class="analysis-section">
-                    <div class="analysis-title">📊 現在の市場状況</div>
-                    <div class="analysis-content">
-                        <strong>トレンド:</strong> ${analysis.trend} (${analysis.trendStrength})<br>
-                        <strong>RSI (14):</strong> ${analysis.rsi}<br>
-                        <strong>MACD:</strong> ${analysis.macd}<br>
-                        <strong>ボリンジャーバンド幅:</strong> ${analysis.bb}
-                    </div>
-                </div>
-                
-                <div class="analysis-section">
-                    <div class="analysis-title">🔮 予測価格</div>
-                    <table class="prediction-table">
-                        <thead>
-                            <tr>
-                                <th>時間</th>
-                                <th>予測価格</th>
-                                <th>変動</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>3分後</td>
-                                <td>${analysis.predictions.min3.toFixed(4)}</td>
-                                <td>${(analysis.predictions.min3 - liveRate).toFixed(4)}</td>
-                            </tr>
-                            <tr>
-                                <td>10分後</td>
-                                <td>${analysis.predictions.min10.toFixed(4)}</td>
-                                <td>${(analysis.predictions.min10 - liveRate).toFixed(4)}</td>
-                            </tr>
-                            <tr>
-                                <td>30分後</td>
-                                <td>${analysis.predictions.min30.toFixed(4)}</td>
-                                <td>${(analysis.predictions.min30 - liveRate).toFixed(4)}</td>
-                            </tr>
-                            <tr>
-                                <td>60分後 (1時間)</td>
-                                <td>${analysis.predictions.min60.toFixed(4)}</td>
-                                <td>${(analysis.predictions.min60 - liveRate).toFixed(4)}</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <div class="analysis-section">
-                    <div class="analysis-title">💡 アナリストコメント</div>
-                    <div class="analysis-content">
-                        ${analysis.commentary}
-                    </div>
-                </div>
-            `;
-            
-            document.getElementById('analysisResult').innerHTML = html;
-            document.getElementById('analysisModal').classList.add('active');
-        }
-
-        // ========================================
-        // カウントダウン
-        // ========================================
-        function startCountdown() {
-            if (countdownInterval) clearInterval(countdownInterval);
-            
-            countdown = 10;
-            countdownInterval = setInterval(() => {
-                countdown--;
-                document.getElementById('nextUpdate').textContent = countdown;
-                
-                if (countdown <= 0) {
-                    fetchExchangeRate();
-                    countdown = 10;
-                }
-            }, 1000);
-        }
-
-        function updateLastUpdateTime() {
-            const now = new Date();
-            const timeString = now.toLocaleTimeString('ja-JP', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            document.getElementById('lastUpdate').textContent = timeString;
-        }
-
-        // ========================================
-        // イベントリスナー
-        // ========================================
-        document.getElementById('currencyPair').addEventListener('change', async (e) => {
-            currentPair = e.target.value;
-            priceHistory = [];
-            baseRate = null;
-            liveRate = null;
-            await fetchExchangeRate();
-        });
-
-        document.getElementById('refreshBtn').addEventListener('click', async () => {
-            await fetchExchangeRate();
-            updateLastUpdateTime();
-            countdown = 10;
-        });
-
-        document.getElementById('analysisBtn').addEventListener('click', () => {
-            showAnalysisModal();
-        });
-
-        document.getElementById('closeModalBtn').addEventListener('click', () => {
-            document.getElementById('analysisModal').classList.remove('active');
-        });
-
-        // モーダルの外側をクリックしたら閉じる
-        document.getElementById('analysisModal').addEventListener('click', (e) => {
-            if (e.target.id === 'analysisModal') {
-                document.getElementById('analysisModal').classList.remove('active');
-            }
-        });
-
-        // ========================================
-        // 初期化
-        // ========================================
-        async function init() {
-            // LocalStorageから前回値を取得
-            const savedRate = localStorage.getItem('lastRate');
-            const savedPair = localStorage.getItem('lastPair');
-            if (savedRate && savedPair === currentPair) {
-                baseRate = parseFloat(savedRate);
-                liveRate = baseRate;
-                updateCurrentRate();
-            }
-            
-            await fetchExchangeRate();
-            startCountdown();
-            
-            // 10秒ごとに自動更新
-            if (updateInterval) clearInterval(updateInterval);
-            updateInterval = setInterval(async () => {
-                await fetchExchangeRate();
-            }, 10000);
-        }
-
-        // ページ読み込み時に初期化
-        init();
-    </script>
 </body>
 </html>

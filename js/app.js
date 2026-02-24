@@ -1,0 +1,701 @@
+/**
+ * app.js - メインアプリケーションコントローラー
+ * 全モジュールを初期化し、UIイベントと状態管理を担う
+ */
+
+const App = (function () {
+  // -------- 状態 --------
+  let _currentTab = 'dashboard';
+  let _currentZoneId = null;
+  let _currentFacility = CONFIG.defaultFacility;
+  let _predictionResults = {}; // { zoneId: predictions[] }
+  let _refreshInterval = null;
+  let _currentPage = 1;
+  const PAGE_SIZE = 20;
+
+  // -------- 初期化 --------
+
+  async function init() {
+    console.log('[App] 初期化開始');
+
+    // モジュール初期化
+    dataManager.init();
+    dummyGenerator; // グローバル登録済み
+    weatherClient.init(_currentFacility.lat, _currentFacility.lng);
+    eventManager.init();
+    predictionEngine.init(dataManager, weatherClient, eventManager);
+    floorPlan.init('floor-plan-svg', 'zone-tooltip', _currentFacility.zones);
+    alertManager.init(dataManager, predictionEngine);
+
+    // 設定を反映
+    const settings = dataManager.getSettings();
+    if (settings.facilityName) {
+      _currentFacility = { ..._currentFacility, name: settings.facilityName };
+    }
+    if (settings.lat && settings.lng) {
+      weatherClient.init(settings.lat, settings.lng);
+    }
+
+    // UI初期構築
+    _buildSidebar();
+    _buildZoneSelects();
+    _setupTabNavigation();
+    _setupEventListeners();
+    _setupDataForm();
+    _setupDummyGenerator();
+    _setupSettingsModal();
+    _setupDataTable();
+
+    // デフォルトゾーン選択
+    _currentZoneId = _currentFacility.zones[0]?.id || null;
+
+    // ヘッダー更新
+    _updateHeader();
+    document.getElementById('current-facility-name').textContent = _currentFacility.name;
+
+    // フロアプランのゾーンクリックハンドラ
+    floorPlan.onZoneClick(zoneId => {
+      _currentZoneId = zoneId;
+      _updateSidebarSelection(zoneId);
+      _refreshDashboard();
+    });
+
+    // アラートコールバック
+    alertManager.onNewAlert(alerts => {
+      if (alerts.length > 0) alertManager.showBanner(alerts[0]);
+    });
+
+    // 天気取得
+    _fetchWeather();
+
+    // ダッシュボード初期表示
+    await _refreshDashboard();
+
+    // 自動更新（5分ごと）
+    _refreshInterval = setInterval(() => _autoRefresh(), 5 * 60 * 1000);
+
+    // 日時表示（1分ごと）
+    setInterval(_updateHeader, 60000);
+
+    console.log('[App] 初期化完了');
+  }
+
+  // -------- サイドバー --------
+
+  function _buildSidebar() {
+    const facilityList = document.getElementById('facility-list');
+    if (facilityList) {
+      facilityList.innerHTML = `
+        <div class="facility-item active">
+          <span class="facility-icon">🏬</span>
+          <span class="facility-name">${_currentFacility.name}</span>
+        </div>`;
+    }
+
+    const zoneList = document.getElementById('zone-list');
+    if (!zoneList) return;
+    zoneList.innerHTML = _currentFacility.zones.map(zone => `
+      <div class="zone-item" data-zone-id="${zone.id}" onclick="app.selectZone('${zone.id}')">
+        <span class="zone-dot" style="background:${zone.color}"></span>
+        <span class="zone-name">${zone.shortName || zone.name}</span>
+        <span class="zone-level-badge" id="sidebar-level-${zone.id}">--</span>
+      </div>
+    `).join('');
+  }
+
+  function _updateSidebarSelection(zoneId) {
+    document.querySelectorAll('.zone-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.zoneId === zoneId);
+    });
+  }
+
+  // -------- ゾーン選択肢 --------
+
+  function _buildZoneSelects() {
+    const optionsHTML = _currentFacility.zones.map(z =>
+      `<option value="${z.id}">${z.name}</option>`
+    ).join('');
+
+    ['trend-zone-select', 'pred-zone-select', 'entry-zone', 'table-zone-filter'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        const hasAll = id === 'table-zone-filter';
+        el.innerHTML = (hasAll ? '<option value="">全ゾーン</option>' : '') + optionsHTML;
+      }
+    });
+  }
+
+  // -------- タブナビゲーション --------
+
+  function _setupTabNavigation() {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.addEventListener('click', () => switchTab(btn.dataset.tab));
+    });
+
+    // 予測タブの日付初期値（今日）
+    const predDate = document.getElementById('pred-date');
+    if (predDate) {
+      const today = new Date().toISOString().split('T')[0];
+      predDate.value = today;
+      predDate.min = today;
+    }
+  }
+
+  function switchTab(tabId) {
+    _currentTab = tabId;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === `tab-${tabId}`));
+
+    if (tabId === 'alerts') {
+      alertManager.renderAlertList();
+      alertManager.markAllRead();
+      alertManager.refreshBadge();
+    } else if (tabId === 'data') {
+      _renderDataTable();
+    }
+  }
+
+  // -------- イベントリスナー --------
+
+  function _setupEventListeners() {
+    // サイドバートグル
+    document.getElementById('sidebar-toggle')?.addEventListener('click', () => {
+      document.getElementById('sidebar')?.classList.toggle('open');
+    });
+
+    // クイックアクション
+    document.getElementById('btn-generate-dummy')?.addEventListener('click', () => switchTab('data'));
+    document.getElementById('btn-run-prediction')?.addEventListener('click', () => {
+      switchTab('prediction');
+      _runPrediction();
+    });
+    document.getElementById('btn-export-data')?.addEventListener('click', _exportData);
+
+    // 予測実行ボタン
+    document.getElementById('btn-run-pred')?.addEventListener('click', _runPrediction);
+
+    // ゾーン変更時にグラフ更新
+    document.getElementById('trend-zone-select')?.addEventListener('change', e => {
+      _currentZoneId = e.target.value;
+      _refreshDashboard();
+    });
+
+    // 設定ボタン
+    document.getElementById('btn-settings')?.addEventListener('click', openSettings);
+
+    // 全既読ボタン
+    document.getElementById('btn-mark-all-read')?.addEventListener('click', () => {
+      alertManager.markAllRead();
+      alertManager.renderAlertList();
+    });
+  }
+
+  // -------- ダッシュボード更新 --------
+
+  async function _refreshDashboard() {
+    const latest = dataManager.getLatestCrowdingByZone();
+
+    // フロアプランヒートマップ更新
+    const crowdingData = {};
+    for (const zone of _currentFacility.zones) {
+      const rec = latest[zone.id];
+      if (rec) {
+        // 直近1時間以内のデータがあればトレンド計算
+        const recent = dataManager.getRecords({ zoneId: zone.id, limit: 3 });
+        let trend = 'stable';
+        if (recent.length >= 2) {
+          const diff = recent[0].crowdingLevel - recent[1].crowdingLevel;
+          if (diff > 5) trend = 'up';
+          else if (diff < -5) trend = 'down';
+        }
+        crowdingData[zone.id] = {
+          level: rec.crowdingLevel,
+          trend,
+          visitorCount: rec.visitorCount
+        };
+        // サイドバーバッジ更新
+        const badge = document.getElementById(`sidebar-level-${zone.id}`);
+        if (badge) {
+          badge.textContent = `${rec.crowdingLevel}%`;
+          badge.style.background = `${getCrowdingColor(rec.crowdingLevel)}33`;
+          badge.style.color = getCrowdingColor(rec.crowdingLevel);
+        }
+      }
+    }
+    floorPlan.update(crowdingData);
+
+    // サマリーカード更新
+    const currentZone = _currentFacility.zones.find(z => z.id === _currentZoneId);
+    const currentData = _currentZoneId ? crowdingData[_currentZoneId] : null;
+
+    _updateSummaryCards(currentData, currentZone);
+
+    // 当日グラフ
+    const records = _currentZoneId
+      ? dataManager.getTodayData(_currentZoneId)
+      : [];
+    const zoneForChart = currentZone || _currentFacility.zones[0];
+    if (zoneForChart) {
+      chartManager.renderTodayTrend('today-trend-chart', records, zoneForChart.name);
+    }
+
+    // レコメンデーション（キャッシュ済みなら即表示）
+    if (_currentZoneId && _predictionResults[_currentZoneId]) {
+      const recommendations = predictionEngine.generateRecommendations(
+        _predictionResults[_currentZoneId],
+        currentZone || _currentFacility.zones[0]
+      );
+      alertManager.renderRecommendations(recommendations);
+    } else {
+      alertManager.renderRecommendations([]);
+    }
+
+    alertManager.refreshBadge();
+    document.getElementById('active-alerts').textContent = dataManager.getUnreadAlertCount();
+  }
+
+  function _updateSummaryCards(currentData, zone) {
+    // 現在の混雑度
+    const crowdingEl = document.getElementById('current-crowding');
+    if (crowdingEl) {
+      if (currentData) {
+        crowdingEl.textContent = `${currentData.level}%`;
+        crowdingEl.style.color = getCrowdingColor(currentData.level);
+      } else {
+        crowdingEl.textContent = '--';
+        crowdingEl.style.color = '';
+      }
+    }
+
+    // トレンド
+    const trendEl = document.getElementById('crowding-trend');
+    if (trendEl && currentData) {
+      trendEl.textContent = currentData.trend === 'up' ? '↑ 増加中' : currentData.trend === 'down' ? '↓ 減少中' : '→ 横ばい';
+      trendEl.style.color = currentData.trend === 'up' ? '#ef4444' : currentData.trend === 'down' ? '#10b981' : '#94a3b8';
+    }
+
+    // 次のピーク（キャッシュから）
+    if (_currentZoneId && _predictionResults[_currentZoneId]) {
+      const peak = predictionEngine.getPeakTime(_predictionResults[_currentZoneId]);
+      if (peak) {
+        const peakTimeEl = document.getElementById('next-peak-time');
+        const peakLevelEl = document.getElementById('next-peak-level');
+        if (peakTimeEl) peakTimeEl.textContent = formatTime(peak.targetTs);
+        if (peakLevelEl) peakLevelEl.textContent = `予測: ${peak.predictedLevel}%`;
+      }
+    }
+  }
+
+  // -------- 予測実行 --------
+
+  async function _runPrediction() {
+    const zoneId = document.getElementById('pred-zone-select')?.value || _currentZoneId;
+    const dateInput = document.getElementById('pred-date')?.value;
+    const targetDate = dateInput ? new Date(dateInput) : new Date();
+    const zone = _currentFacility.zones.find(z => z.id === zoneId);
+    if (!zone) { showToast('ゾーンを選択してください', 'warning'); return; }
+
+    showToast('予測計算中...', 'info', 5000);
+    document.getElementById('btn-run-pred').disabled = true;
+    document.getElementById('btn-run-pred').textContent = '⏳ 計算中...';
+
+    try {
+      const predictions = await predictionEngine.predictDay(zoneId, targetDate);
+      _predictionResults[zoneId] = predictions;
+
+      // 予測グラフ
+      const todayRecords = dataManager.getTodayData(zoneId);
+      chartManager.renderPredictionChart('prediction-chart', predictions, todayRecords);
+
+      // 信頼度
+      const avgConf = predictions.reduce((s, p) => s + (p?.confidence || 0), 0) / predictions.length;
+      const confEl = document.getElementById('pred-confidence');
+      if (confEl) confEl.textContent = Math.round(avgConf * 100);
+
+      // 因子チャート（ピーク時の値を使用）
+      const peak = predictionEngine.getPeakTime(predictions);
+      if (peak?.factors) {
+        chartManager.renderFactorChart('factor-chart', peak.factors);
+      }
+
+      // 天気予報表示
+      _renderWeatherForecast();
+
+      // イベント表示
+      _renderEventList(targetDate);
+
+      // AIレコメンデーション
+      const recommendations = predictionEngine.generateRecommendations(predictions, zone);
+      _renderAiRecommendations(recommendations);
+
+      // アラート生成
+      await alertManager.generateFromPredictions([{ zoneId, predictions }]);
+
+      // ダッシュボードのサマリーカードも更新
+      const nextPeakEl = document.getElementById('next-peak-time');
+      const nextPeakLvEl = document.getElementById('next-peak-level');
+      if (peak && nextPeakEl) {
+        nextPeakEl.textContent = formatTime(peak.targetTs);
+        if (nextPeakLvEl) nextPeakLvEl.textContent = `予測: ${peak.predictedLevel}%`;
+      }
+
+      showToast(`予測完了: ${zone.name}（信頼度 ${Math.round(avgConf * 100)}%）`, 'success');
+
+    } catch (e) {
+      console.error('[App] 予測エラー:', e);
+      showToast('予測の実行に失敗しました', 'error');
+    } finally {
+      document.getElementById('btn-run-pred').disabled = false;
+      document.getElementById('btn-run-pred').textContent = '🔮 予測実行';
+    }
+  }
+
+  function _renderWeatherForecast() {
+    const container = document.getElementById('weather-forecast-list');
+    if (!container) return;
+
+    const summary = weatherClient.getDailyForecastSummary();
+    if (!summary || summary.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>天気データを取得中...</p></div>';
+      return;
+    }
+
+    container.innerHTML = summary.map(day => {
+      const date = new Date(day.date);
+      const dayName = `${DAY_NAMES_JA[date.getDay()]}曜`;
+      const mod = weatherClient.getWeatherModifier({ category: day.category, temperature: day.maxTemp }, true);
+      const modPct = Math.round((mod - 1) * 100);
+      const modStr = modPct > 0 ? `+${modPct}%` : `${modPct}%`;
+      const modColor = modPct > 5 ? '#10b981' : modPct < -5 ? '#ef4444' : '#94a3b8';
+      return `
+        <div class="weather-day-item">
+          <span class="weather-day">${dayName}</span>
+          <span class="weather-icon-lg">${day.icon}</span>
+          <div class="weather-temps">
+            <span class="temp-max">${day.maxTemp}°</span>
+            <span class="temp-min">${day.minTemp}°</span>
+          </div>
+          <span class="weather-impact" style="color:${modColor}">${modStr}</span>
+          ${day.precipitation > 0 ? `<span class="weather-rain">💧${day.precipitation}mm</span>` : ''}
+        </div>`;
+    }).join('');
+  }
+
+  function _renderEventList(targetDate) {
+    const container = document.getElementById('event-list');
+    if (!container) return;
+
+    const events = eventManager.getUpcomingEvents(7);
+    if (events.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>登録されたイベントはありません</p></div>';
+      return;
+    }
+
+    container.innerHTML = events.map(evt => `
+      <div class="event-item size-${evt.size}">
+        <div class="event-icon">${eventManager.getEventTypeIcon(evt.type)}</div>
+        <div class="event-body">
+          <div class="event-name">${evt.name}</div>
+          <div class="event-meta">
+            ${eventManager.getEventSizeLabel(evt.size)} ・
+            ${formatDate(evt.startTs)} ～ ${formatTime(evt.endTs)}
+          </div>
+        </div>
+        <div class="event-impact">+${Math.round((evt.impact - 1) * 100)}%</div>
+      </div>
+    `).join('');
+  }
+
+  function _renderAiRecommendations(recommendations) {
+    const container = document.getElementById('ai-recommendations');
+    if (!container) return;
+
+    if (!recommendations || recommendations.length === 0) {
+      container.innerHTML = `<div class="empty-state"><p>予測データからレコメンデーションが生成されます</p></div>`;
+      return;
+    }
+
+    container.innerHTML = recommendations.map(rec => `
+      <div class="ai-rec-card ${rec.severity}">
+        <div class="ai-rec-header">
+          <span class="ai-rec-icon">${alertManager._getTypeIcon(rec.type)}</span>
+          <span class="ai-rec-time">${alertManager._formatAlertTime(rec.time)}</span>
+          <span class="ai-rec-badge ${rec.severity}">${alertManager._getSeverityLabel(rec.severity)}</span>
+        </div>
+        <p class="ai-rec-message">${rec.message}</p>
+        <div class="ai-rec-action">
+          <span class="action-label">推奨アクション</span>
+          <p>${rec.action}</p>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  // -------- データ入力フォーム --------
+
+  function _setupDataForm() {
+    const form = document.getElementById('data-entry-form');
+    if (!form) return;
+
+    // 日時のデフォルト値
+    const dtInput = document.getElementById('entry-datetime');
+    if (dtInput) {
+      const now = new Date();
+      now.setMinutes(0, 0, 0);
+      dtInput.value = now.toISOString().slice(0, 16);
+    }
+
+    form.addEventListener('submit', e => {
+      e.preventDefault();
+      const zoneId = document.getElementById('entry-zone').value;
+      const datetime = new Date(document.getElementById('entry-datetime').value).getTime();
+      const level = parseInt(document.getElementById('entry-level').value);
+      const count = parseInt(document.getElementById('entry-count').value) || null;
+      const notes = document.getElementById('entry-notes').value;
+
+      dataManager.saveRecord({ zoneId, timestamp: datetime, crowdingLevel: level, visitorCount: count, notes });
+      showToast('データを保存しました', 'success');
+      _renderDataTable();
+      form.reset();
+    });
+  }
+
+  // -------- ダミーデータ生成 --------
+
+  function _setupDummyGenerator() {
+    document.getElementById('btn-generate')?.addEventListener('click', () => {
+      const period = parseInt(document.getElementById('dummy-period').value) || 30;
+      const facilityType = document.getElementById('dummy-facility-type').value || 'mall';
+      const options = {
+        includeEvents: document.getElementById('dummy-include-events').checked,
+        includeWeather: document.getElementById('dummy-include-weather').checked,
+        includeHolidays: document.getElementById('dummy-include-holidays').checked
+      };
+
+      const resultEl = document.getElementById('generation-result');
+      if (resultEl) {
+        resultEl.innerHTML = '<div class="loading-spinner">⏳ 生成中...</div>';
+        resultEl.classList.remove('hidden');
+      }
+
+      setTimeout(() => {
+        try {
+          const count = dummyGenerator.generate(facilityType, period, options, _currentFacility.zones);
+          predictionEngine.clearCache();
+          if (resultEl) {
+            resultEl.innerHTML = `<div class="success-msg">✅ ${count.toLocaleString()}件のデータを生成しました</div>`;
+          }
+          showToast(`${count.toLocaleString()}件のテストデータを生成しました`, 'success');
+          _renderDataTable();
+          _refreshDashboard();
+        } catch (e) {
+          console.error(e);
+          showToast('データ生成に失敗しました', 'error');
+        }
+      }, 50);
+    });
+
+    document.getElementById('btn-clear-data')?.addEventListener('click', () => {
+      if (!confirm('全データを削除しますか？この操作は元に戻せません。')) return;
+      dataManager.deleteAllRecords();
+      predictionEngine.clearCache();
+      showToast('全データを削除しました', 'info');
+      _renderDataTable();
+      _refreshDashboard();
+    });
+  }
+
+  // -------- データテーブル --------
+
+  function _setupDataTable() {
+    document.getElementById('table-zone-filter')?.addEventListener('change', () => {
+      _currentPage = 1;
+      _renderDataTable();
+    });
+    document.getElementById('table-date-filter')?.addEventListener('change', () => {
+      _currentPage = 1;
+      _renderDataTable();
+    });
+    document.getElementById('btn-prev-page')?.addEventListener('click', () => {
+      if (_currentPage > 1) { _currentPage--; _renderDataTable(); }
+    });
+    document.getElementById('btn-next-page')?.addEventListener('click', () => {
+      _currentPage++;
+      _renderDataTable();
+    });
+  }
+
+  function _renderDataTable() {
+    const tbody = document.getElementById('data-table-body');
+    if (!tbody) return;
+
+    const zoneFilter = document.getElementById('table-zone-filter')?.value || '';
+    const dateFilter = document.getElementById('table-date-filter')?.value || '';
+
+    let startTime = null;
+    let endTime = null;
+    if (dateFilter) {
+      startTime = new Date(dateFilter).getTime();
+      endTime = startTime + 24 * 60 * 60 * 1000;
+    }
+
+    const records = dataManager.getRecords({
+      zoneId: zoneFilter || null,
+      startTime, endTime,
+      limit: 10000
+    });
+
+    const totalPages = Math.max(1, Math.ceil(records.length / PAGE_SIZE));
+    if (_currentPage > totalPages) _currentPage = totalPages;
+
+    const pageRecords = records.slice((_currentPage - 1) * PAGE_SIZE, _currentPage * PAGE_SIZE);
+
+    document.getElementById('page-info').textContent = `${_currentPage} / ${totalPages}`;
+    document.getElementById('btn-prev-page').disabled = _currentPage <= 1;
+    document.getElementById('btn-next-page').disabled = _currentPage >= totalPages;
+
+    if (pageRecords.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" class="empty-cell">データがありません</td></tr>`;
+      return;
+    }
+
+    const zoneMap = {};
+    _currentFacility.zones.forEach(z => { zoneMap[z.id] = z.name; });
+
+    tbody.innerHTML = pageRecords.map(r => {
+      const color = getCrowdingColor(r.crowdingLevel);
+      return `<tr>
+        <td>${formatDateTime(r.timestamp)}</td>
+        <td>${zoneMap[r.zoneId] || r.zoneId}</td>
+        <td>
+          <div class="level-cell">
+            <span class="level-bar" style="width:${r.crowdingLevel}%;background:${color}30;border-color:${color}"></span>
+            <span style="color:${color};font-weight:600">${r.crowdingLevel}%</span>
+          </div>
+        </td>
+        <td>${r.visitorCount !== null ? r.visitorCount.toLocaleString() + '人' : '--'}</td>
+        <td class="notes-cell">${r.notes || '--'}</td>
+      </tr>`;
+    }).join('');
+  }
+
+  // -------- 天気ウィジェット --------
+
+  async function _fetchWeather() {
+    try {
+      await weatherClient.fetchForecast();
+      const now = new Date();
+      now.setMinutes(0, 0, 0);
+      const current = weatherClient.getForecastForDateTime(now);
+      document.getElementById('weather-icon').textContent = current.icon || '☁';
+      document.getElementById('weather-temp').textContent = `${Math.round(current.temperature)}°C`;
+      document.getElementById('weather-desc').textContent = current.description || '取得済み';
+
+      // 天気影響カード
+      const mod = weatherClient.getWeatherModifier(current, true);
+      const pct = Math.round((mod - 1) * 100);
+      document.getElementById('weather-impact').textContent = `${pct > 0 ? '+' : ''}${pct}%`;
+      document.getElementById('weather-impact').style.color = pct > 5 ? '#10b981' : pct < -5 ? '#ef4444' : '#94a3b8';
+      document.getElementById('weather-impact-detail').textContent = current.description || '--';
+      document.getElementById('weather-api-status').innerHTML = `<span class="status-dot active"></span> 接続済み`;
+    } catch (e) {
+      console.warn('[App] 天気取得失敗:', e);
+    }
+  }
+
+  // -------- 設定モーダル --------
+
+  function _setupSettingsModal() {
+    const settings = dataManager.getSettings();
+    const nameInput = document.getElementById('setting-facility-name');
+    const latInput = document.getElementById('setting-lat');
+    const lngInput = document.getElementById('setting-lng');
+
+    if (nameInput) nameInput.value = settings.facilityName || _currentFacility.name;
+    if (latInput) latInput.value = settings.lat || _currentFacility.lat;
+    if (lngInput) lngInput.value = settings.lng || _currentFacility.lng;
+
+    document.getElementById('btn-save-settings')?.addEventListener('click', () => {
+      const newSettings = {
+        facilityName: nameInput?.value || _currentFacility.name,
+        lat: parseFloat(latInput?.value) || _currentFacility.lat,
+        lng: parseFloat(lngInput?.value) || _currentFacility.lng,
+      };
+      dataManager.saveSettings(newSettings);
+      _currentFacility = { ..._currentFacility, name: newSettings.facilityName };
+      weatherClient.init(newSettings.lat, newSettings.lng);
+      document.getElementById('current-facility-name').textContent = newSettings.facilityName;
+      document.querySelector('.facility-name').textContent = newSettings.facilityName;
+      closeSettings();
+      _fetchWeather();
+      showToast('設定を保存しました', 'success');
+    });
+  }
+
+  function openSettings() {
+    document.getElementById('settings-modal')?.classList.remove('hidden');
+  }
+
+  function closeSettings() {
+    document.getElementById('settings-modal')?.classList.add('hidden');
+  }
+
+  // -------- データエクスポート --------
+
+  function _exportData() {
+    const json = dataManager.exportData();
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `crowdsense-export-${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('データをエクスポートしました', 'success');
+  }
+
+  // -------- ヘッダー更新 --------
+
+  function _updateHeader() {
+    const el = document.getElementById('current-datetime');
+    if (el) {
+      const now = new Date();
+      el.textContent = now.toLocaleString('ja-JP', {
+        year: 'numeric', month: 'long', day: 'numeric',
+        weekday: 'short', hour: '2-digit', minute: '2-digit'
+      });
+    }
+    const lastUpdate = document.getElementById('last-update-time');
+    if (lastUpdate) {
+      lastUpdate.textContent = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+    }
+  }
+
+  async function _autoRefresh() {
+    await _fetchWeather();
+    await _refreshDashboard();
+    document.getElementById('last-update-time').textContent =
+      new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // -------- 公開API --------
+
+  return {
+    init,
+    switchTab,
+    selectZone(zoneId) {
+      _currentZoneId = zoneId;
+      floorPlan.setSelectedZone(zoneId);
+      _updateSidebarSelection(zoneId);
+      _refreshDashboard();
+    },
+    openSettings,
+    closeSettings,
+    runPrediction: _runPrediction
+  };
+})();
+
+window.app = App;
+
+// DOM準備後に初期化
+document.addEventListener('DOMContentLoaded', () => App.init());
