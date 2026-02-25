@@ -6,6 +6,10 @@
   <title>CrowdSense Pro - マイクロロケーション混雑予測AIシステム</title>
   <meta name="description" content="店舗・施設管理者向けB2B混雑予測AIシステム。天気・イベントを組み合わせた高精度予測でシフト・ダイナミックプライシングを最適化。">
 
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
@@ -144,10 +148,10 @@
       <!-- FLOOR PLAN + TREND CHART -->
       <div class="dashboard-grid">
 
-        <!-- Floor Plan Heatmap -->
+        <!-- Ueno Park Map Heatmap -->
         <div class="panel floor-plan-panel">
           <div class="panel-header">
-            <h2>施設内混雑ヒートマップ</h2>
+            <h2>🌳 上野公園 混雑ヒートマップ</h2>
             <div class="panel-controls">
               <span class="panel-subtitle" id="heatmap-time-label">現在のリアルタイム状況</span>
               <div class="crowding-legend">
@@ -157,13 +161,8 @@
               </div>
             </div>
           </div>
-          <div class="panel-body">
-            <div id="floor-plan-container">
-              <svg id="floor-plan-svg" viewBox="0 0 1000 600"
-                   xmlns="http://www.w3.org/2000/svg" aria-label="施設内フロアプランヒートマップ">
-                <!-- SVGはfloor-plan.jsが動的に生成 -->
-              </svg>
-            </div>
+          <div class="panel-body map-panel-body">
+            <div id="map-container" class="leaflet-map-container" aria-label="上野公園混雑ヒートマップ"></div>
             <div id="zone-tooltip" class="zone-tooltip hidden">
               <div class="tooltip-name"></div>
               <div class="tooltip-level"></div>
@@ -385,6 +384,36 @@
 
       </div><!-- /data-grid -->
 
+      <!-- Event Management -->
+      <div class="panel event-management-panel">
+        <div class="panel-header">
+          <h2>📅 ローカルイベント管理</h2>
+          <span class="panel-subtitle">桜まつり・特別展・祭りなどを手動登録して予測精度を向上</span>
+        </div>
+        <div class="panel-body">
+          <div class="event-management-layout">
+
+            <!-- 登録フォーム -->
+            <div class="event-form-col">
+              <h3 class="event-section-title">イベント登録・編集</h3>
+              <div id="event-registration-container">
+                <!-- event-manager.js が描画 -->
+                <div class="empty-state"><p>「データ管理」タブを開くと表示されます</p></div>
+              </div>
+            </div>
+
+            <!-- 一覧 -->
+            <div class="event-list-col">
+              <h3 class="event-section-title">登録済みイベント一覧</h3>
+              <div id="event-manage-list" class="event-manage-list">
+                <!-- event-manager.js が描画 -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       <!-- Data Table -->
       <div class="panel">
         <div class="panel-header">
@@ -534,6 +563,12 @@
 <div id="toast-container" class="toast-container"></div>
 
 <!-- ========== SCRIPTS ========== -->
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV/XN/WLs=" crossorigin=""></script>
+<!-- Leaflet.heat heatmap plugin -->
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+
 <script src="js/config.js"></script>
 <script src="js/data-manager.js"></script>
 <script src="js/dummy-generator.js"></script>

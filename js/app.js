@@ -24,7 +24,7 @@ const App = (function () {
     weatherClient.init(_currentFacility.lat, _currentFacility.lng);
     eventManager.init();
     predictionEngine.init(dataManager, weatherClient, eventManager);
-    floorPlan.init('floor-plan-svg', 'zone-tooltip', _currentFacility.zones);
+    floorPlan.init('map-container', 'zone-tooltip', _currentFacility.zones);
     alertManager.init(dataManager, predictionEngine);
 
     // 設定を反映
@@ -87,7 +87,7 @@ const App = (function () {
     if (facilityList) {
       facilityList.innerHTML = `
         <div class="facility-item active">
-          <span class="facility-icon">🏬</span>
+          <span class="facility-icon">🌳</span>
           <span class="facility-name">${_currentFacility.name}</span>
         </div>`;
     }
@@ -152,6 +152,7 @@ const App = (function () {
       alertManager.refreshBadge();
     } else if (tabId === 'data') {
       _renderDataTable();
+      _setupEventManagement();
     }
   }
 
@@ -385,25 +386,38 @@ const App = (function () {
     const container = document.getElementById('event-list');
     if (!container) return;
 
-    const events = eventManager.getUpcomingEvents(7);
+    const events = eventManager.getUpcomingEvents(14);
     if (events.length === 0) {
-      container.innerHTML = '<div class="empty-state"><p>登録されたイベントはありません</p></div>';
+      container.innerHTML = '<div class="empty-state"><p>登録されたイベントはありません</p><small>データ管理タブから追加できます</small></div>';
       return;
     }
 
-    container.innerHTML = events.map(evt => `
-      <div class="event-item size-${evt.size}">
-        <div class="event-icon">${eventManager.getEventTypeIcon(evt.type)}</div>
-        <div class="event-body">
-          <div class="event-name">${evt.name}</div>
-          <div class="event-meta">
-            ${eventManager.getEventSizeLabel(evt.size)} ・
-            ${formatDate(evt.startTs)} ～ ${formatTime(evt.endTs)}
+    container.innerHTML = events.map(evt => {
+      const pct = Math.round((evt.impact - 1) * 100);
+      const now = Date.now();
+      const isActive = now >= evt.startTs && now <= evt.endTs;
+      const fmtTs = ts => new Date(ts).toLocaleString('ja-JP',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      return `
+        <div class="event-item${isActive ? ' event-active' : ''}">
+          <div class="event-icon">${eventManager.getEventTypeIcon(evt.type)}</div>
+          <div class="event-body">
+            <div class="event-name">${evt.name}${isActive ? ' <span class="event-live-badge">開催中</span>' : ''}</div>
+            <div class="event-meta">${fmtTs(evt.startTs)} 〜 ${fmtTs(evt.endTs)}</div>
           </div>
-        </div>
-        <div class="event-impact">+${Math.round((evt.impact - 1) * 100)}%</div>
-      </div>
-    `).join('');
+          <div class="event-impact">+${pct}%</div>
+        </div>`;
+    }).join('');
+  }
+
+  let _eventManagementReady = false;
+  function _setupEventManagement() {
+    if (_eventManagementReady) {
+      eventManager.renderEventList('event-manage-list');
+      return;
+    }
+    eventManager.renderEventRegistrationForm('event-registration-container');
+    eventManager.renderEventList('event-manage-list');
+    _eventManagementReady = true;
   }
 
   function _renderAiRecommendations(recommendations) {
