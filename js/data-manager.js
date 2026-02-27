@@ -5,9 +5,11 @@
 
 class DataManager {
   constructor() {
-    this.RECORDS_KEY = 'crowdsense_records';
-    this.SETTINGS_KEY = 'crowdsense_settings';
-    this.ALERTS_KEY = 'crowdsense_alerts';
+    this.RECORDS_KEY     = 'crowdsense_records';
+    this.SETTINGS_KEY    = 'crowdsense_settings';
+    this.ALERTS_KEY      = 'crowdsense_alerts';
+    this.GROUND_TRUTH_KEY = 'crowdsense_ground_truth';
+    this.BIAS_KEY        = 'crowdsense_bias';
     this._cache = null;
   }
 
@@ -19,6 +21,9 @@ class DataManager {
     }
     if (!localStorage.getItem(this.ALERTS_KEY)) {
       localStorage.setItem(this.ALERTS_KEY, JSON.stringify([]));
+    }
+    if (!localStorage.getItem(this.GROUND_TRUTH_KEY)) {
+      localStorage.setItem(this.GROUND_TRUTH_KEY, JSON.stringify([]));
     }
     this._cache = null;
     console.log('[DataManager] 初期化完了。レコード数:', this._getAllRecords().length);
@@ -214,6 +219,123 @@ class DataManager {
       console.error('[DataManager] インポートエラー:', e);
       throw e;
     }
+  }
+
+  // -------- Ground Truth（実績値）管理 --------
+
+  _getAllGroundTruth() {
+    const raw = localStorage.getItem(this.GROUND_TRUTH_KEY);
+    return raw ? JSON.parse(raw) : [];
+  }
+
+  _saveAllGroundTruth(records) {
+    localStorage.setItem(this.GROUND_TRUTH_KEY, JSON.stringify(records));
+  }
+
+  /**
+   * 実績値を保存し、バイアス補正を更新する
+   * @param {Object} record - { zoneId, timestamp, predictedLevel, actualLevel, source?, notes? }
+   */
+  saveGroundTruth(record) {
+    const records = this._getAllGroundTruth();
+    const newRecord = {
+      id: `gt_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+      zoneId: record.zoneId,
+      timestamp: record.timestamp || Date.now(),
+      predictedLevel: Math.max(0, Math.min(100, Math.round(record.predictedLevel))),
+      actualLevel:    Math.max(0, Math.min(100, Math.round(record.actualLevel))),
+      source: record.source || 'manual',
+      notes: record.notes || '',
+      createdAt: Date.now()
+    };
+    records.push(newRecord);
+    this._saveAllGroundTruth(records);
+    this._updateBiasCorrection(record.zoneId);
+    return newRecord;
+  }
+
+  /**
+   * Ground Truthレコードを取得
+   */
+  getGroundTruth({ zoneId = null, startTime = null, endTime = null, limit = 100 } = {}) {
+    let records = this._getAllGroundTruth();
+    if (zoneId) records = records.filter(r => r.zoneId === zoneId);
+    if (startTime) records = records.filter(r => r.timestamp >= startTime);
+    if (endTime)   records = records.filter(r => r.timestamp <= endTime);
+    records.sort((a, b) => b.timestamp - a.timestamp);
+    return records.slice(0, limit);
+  }
+
+  /**
+   * 予測精度統計を計算
+   * @param {string|null} zoneId - nullで全ゾーン合算
+   * @param {number} daysBack
+   * @returns {{ accuracy, mae, bias, biasFactor, sampleCount }}
+   */
+  calculateAccuracyStats(zoneId = null, daysBack = 7) {
+    const cutoff = Date.now() - daysBack * 24 * 60 * 60 * 1000;
+    const records = this._getAllGroundTruth().filter(r => {
+      if (r.timestamp < cutoff) return false;
+      return !zoneId || r.zoneId === zoneId;
+    });
+
+    if (records.length === 0) {
+      return { accuracy: null, mae: null, bias: null, biasFactor: 1.0, sampleCount: 0 };
+    }
+
+    const errors    = records.map(r => r.predictedLevel - r.actualLevel);
+    const absErrors = errors.map(Math.abs);
+    const mae       = absErrors.reduce((a, b) => a + b, 0) / absErrors.length;
+    const bias      = errors.reduce((a, b) => a + b, 0) / errors.length;
+    const accuracy  = Math.max(0, Math.min(100, Math.round(100 - mae)));
+    const biasData  = this._getBiasData();
+    const biasFactor = zoneId ? (biasData[zoneId]?.correction ?? 1.0) : 1.0;
+
+    return {
+      accuracy,
+      mae:       Math.round(mae  * 10) / 10,
+      bias:      Math.round(bias * 10) / 10,
+      biasFactor: Math.round(biasFactor * 100) / 100,
+      sampleCount: records.length
+    };
+  }
+
+  /**
+   * バイアス補正係数を更新（Ground Truth追加時に自動呼び出し）
+   * アルゴリズム: 直近20件の平均誤差を50%補正する緩やかな自己チューニング
+   */
+  _updateBiasCorrection(zoneId) {
+    const all    = this._getAllGroundTruth().filter(r => r.zoneId === zoneId);
+    const recent = all.sort((a, b) => b.timestamp - a.timestamp).slice(0, 20);
+    if (recent.length < 3) return;
+
+    const biasSum      = recent.reduce((s, r) => s + (r.predictedLevel - r.actualLevel), 0);
+    const bias         = biasSum / recent.length;
+    const avgPredicted = recent.reduce((s, r) => s + r.predictedLevel, 0) / recent.length;
+
+    // 50%緩和: 誤差を半分だけ補正 → 急激なオーバーフィット防止
+    const rawCorrection = avgPredicted > 0 ? 1 - (bias / avgPredicted) * 0.5 : 1.0;
+    const correction    = Math.max(0.6, Math.min(1.4, rawCorrection));
+
+    const biasData = this._getBiasData();
+    biasData[zoneId] = {
+      correction,
+      bias:        Math.round(bias * 10) / 10,
+      sampleCount: recent.length,
+      lastUpdated: Date.now()
+    };
+    localStorage.setItem(this.BIAS_KEY, JSON.stringify(biasData));
+    console.log(`[DataManager] バイアス補正更新 ${zoneId}: ×${correction.toFixed(3)} (bias=${bias.toFixed(1)}pt)`);
+  }
+
+  _getBiasData() {
+    const raw = localStorage.getItem(this.BIAS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  }
+
+  /** バイアス補正係数を取得（予測エンジンから参照） */
+  getBiasCorrection(zoneId) {
+    return this._getBiasData()[zoneId]?.correction ?? 1.0;
   }
 
   // -------- アラート管理 --------

@@ -116,6 +116,9 @@ class PredictionEngine {
     // ⑦ 季節モディファイア
     const seasonalMod = this._getUenoSeasonalModifier(zone, month, day);
 
+    // ⑧ バイアス補正（Ground Truth実績から自己学習）
+    const biasFactor = this.dataManager.getBiasCorrection(zone.id);
+
     // 合成
     let predicted = base
       * weatherMod
@@ -123,7 +126,8 @@ class PredictionEngine {
       * dayTypeMod
       * cherryBlossomMod
       * mondayMuseumMod
-      * seasonalMod;
+      * seasonalMod
+      * biasFactor;
     predicted = Math.max(1, Math.min(100, Math.round(predicted)));
 
     return this._makePrediction(zone.id, targetTs, predicted, confidence, {
@@ -134,6 +138,7 @@ class PredictionEngine {
       cherryBlossomMod:  parseFloat(cherryBlossomMod.toFixed(2)),
       mondayMuseumMod:   parseFloat(mondayMuseumMod.toFixed(2)),
       seasonalMod:       parseFloat(seasonalMod.toFixed(2)),
+      biasFactor:        parseFloat(biasFactor.toFixed(3)),
       weatherInfo:       weather,
       events:            nearbyEvents.map(e => ({ name: e.name, impact: e.impact }))
     });
@@ -419,6 +424,15 @@ class PredictionEngine {
   // ----------------------------------------------------------------
   // ユーティリティ
   // ----------------------------------------------------------------
+
+  /**
+   * 予測精度統計を返す（AccuracyPanel用）
+   * @param {string|null} zoneId
+   * @param {number} daysBack
+   */
+  getAccuracyStats(zoneId = null, daysBack = 7) {
+    return this.dataManager.calculateAccuracyStats(zoneId, daysBack);
+  }
 
   getPeakTime(predictions) {
     if (!predictions?.length) return null;

@@ -136,6 +136,48 @@
         </div>
       </div>
 
+      <!-- AI精度スコアパネル -->
+      <div class="panel accuracy-panel">
+        <div class="panel-header">
+          <h2>AI予測精度スコア</h2>
+          <span class="panel-subtitle" id="accuracy-period">過去7日間の実績比較</span>
+        </div>
+        <div class="panel-body accuracy-panel-body">
+          <div class="accuracy-gauge-wrap">
+            <div class="accuracy-ring" id="accuracy-ring">
+              <div class="accuracy-ring-inner">
+                <span class="accuracy-score-num" id="accuracy-score">--</span>
+                <span class="accuracy-score-pct">%</span>
+              </div>
+            </div>
+            <div class="accuracy-ring-label">予測精度</div>
+          </div>
+          <div class="accuracy-stats">
+            <div class="accuracy-stat-item">
+              <span class="ast-label">平均誤差（MAE）</span>
+              <span class="ast-value" id="accuracy-mae">-- pt</span>
+            </div>
+            <div class="accuracy-stat-item">
+              <span class="ast-label">バイアス</span>
+              <span class="ast-value" id="accuracy-bias">--</span>
+            </div>
+            <div class="accuracy-stat-item">
+              <span class="ast-label">自己補正係数</span>
+              <span class="ast-value" id="accuracy-bias-factor">-- ×</span>
+            </div>
+            <div class="accuracy-stat-item">
+              <span class="ast-label">サンプル数</span>
+              <span class="ast-value" id="accuracy-samples">0 件</span>
+            </div>
+          </div>
+          <div class="accuracy-cta" id="accuracy-cta">
+            <div class="accuracy-cta-icon">🤖</div>
+            <p>POS・IoT実績値を入力すると<br>AIが自動補正します</p>
+            <button onclick="app.switchTab('data')" class="btn-link">→ 実績値を入力</button>
+          </div>
+        </div>
+      </div>
+
       <!-- ALERT BANNER -->
       <div id="alert-banner" class="alert-banner hidden">
         <div class="alert-banner-icon">⚠️</div>
@@ -221,6 +263,45 @@
           <input type="date" id="pred-date" class="control-input">
         </div>
         <button id="btn-run-pred" class="btn-primary">🔮 予測実行</button>
+      </div>
+
+      <!-- マネージャー補正パネル -->
+      <div class="panel override-panel">
+        <div class="panel-header">
+          <h2>マネージャー補正（直感補正）</h2>
+          <span class="panel-subtitle">AIの予測に現場の事情を上書き — グラフにオレンジで反映</span>
+        </div>
+        <div class="panel-body">
+          <div class="override-layout">
+
+            <div class="override-slider-wrap">
+              <div class="override-value-row">
+                <span class="override-label-text">補正量</span>
+                <span class="override-badge" id="override-badge">±0%</span>
+                <span class="override-reason-display" id="override-reason-display"></span>
+              </div>
+              <input type="range" id="override-slider" class="override-slider"
+                     min="-50" max="50" value="0" step="5">
+              <div class="override-scale">
+                <span>-50%</span><span>-25%</span><span>0</span><span>+25%</span><span>+50%</span>
+              </div>
+            </div>
+
+            <div class="override-right">
+              <input type="text" id="override-reason" class="form-control override-reason-input"
+                     placeholder="補正理由（任意）: 未登録イベント・近隣工事・特売日 など">
+              <div class="override-presets">
+                <span class="override-preset-label">クイック選択:</span>
+                <button class="override-preset-btn negative" data-value="-30">-30% 工事</button>
+                <button class="override-preset-btn negative" data-value="-20">-20% 悪天候</button>
+                <button class="override-preset-btn neutral"  data-value="0">リセット</button>
+                <button class="override-preset-btn positive" data-value="20">+20% 集客</button>
+                <button class="override-preset-btn positive" data-value="40">+40% イベント</button>
+              </div>
+            </div>
+
+          </div>
+        </div>
       </div>
 
       <!-- 24h Prediction Chart -->
@@ -384,6 +465,72 @@
         </div>
 
       </div><!-- /data-grid -->
+
+      <!-- Ground Truth（実績値）入力パネル -->
+      <div class="panel gt-panel">
+        <div class="panel-header">
+          <h2>実績値入力（Ground Truth）</h2>
+          <span class="panel-subtitle">POS・IoTカメラの実測値でAIを自己チューニング</span>
+        </div>
+        <div class="panel-body">
+          <div class="gt-layout">
+
+            <!-- 入力フォーム -->
+            <div class="gt-form-col">
+              <form id="ground-truth-form" class="data-form">
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>ゾーン</label>
+                    <select id="gt-zone" class="form-control" required></select>
+                  </div>
+                  <div class="form-group">
+                    <label>データソース</label>
+                    <select id="gt-source" class="form-control">
+                      <option value="manual">手動入力</option>
+                      <option value="pos">POSレジデータ</option>
+                      <option value="iot">IoTカメラ検知</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>計測日時</label>
+                  <input type="datetime-local" id="gt-datetime" class="form-control" required>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label>AIの予測値 (%)</label>
+                    <input type="number" id="gt-predicted" class="form-control" min="0" max="100"
+                           placeholder="予測タブから確認" required>
+                  </div>
+                  <div class="form-group">
+                    <label>実際の混雑度 (%)</label>
+                    <input type="number" id="gt-actual" class="form-control" min="0" max="100"
+                           placeholder="0〜100" required>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label>備考</label>
+                  <input type="text" id="gt-notes" class="form-control"
+                         placeholder="特記事項（イベント有無、天気など）">
+                </div>
+                <button type="submit" class="btn-primary full-width">📊 実績値を保存してAIを更新</button>
+              </form>
+            </div>
+
+            <!-- 直近履歴 -->
+            <div class="gt-history-col">
+              <div class="gt-history-header">
+                <span>直近の実績記録</span>
+                <span class="gt-accuracy-inline" id="gt-accuracy-inline"></span>
+              </div>
+              <div id="gt-history-list" class="gt-history-list">
+                <div class="empty-state"><p>まだ実績値がありません</p></div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /gt-panel -->
 
       <!-- Auto Collection Panel -->
       <div class="panel" id="auto-collect-panel">

@@ -101,9 +101,13 @@ class ChartManager {
   }
 
   /**
-   * 24時間予測グラフ（実績 + 予測の重ね合わせ）
+   * 24時間予測グラフ（実績 + AI予測 + マネージャー補正後）
+   * @param {string} canvasId
+   * @param {Array}  predictions
+   * @param {Array}  todayRecords
+   * @param {number} overrideMultiplier - マネージャー補正係数 (例: 1.2 = +20%)
    */
-  renderPredictionChart(canvasId, predictions, todayRecords = []) {
+  renderPredictionChart(canvasId, predictions, todayRecords = [], overrideMultiplier = 1.0) {
     this._destroyChart(canvasId);
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
@@ -200,26 +204,59 @@ class ChartManager {
             callbacks: {
               title: ctx => `${ctx[0].label}`,
               label: ctx => {
-                if (ctx.dataset.label === '実績') return `実績: ${ctx.parsed.y}%`;
-                if (ctx.dataset.label === 'AI予測') return `予測: ${ctx.parsed.y}%`;
+                if (ctx.dataset.label === '実績')             return `実績: ${ctx.parsed.y}%`;
+                if (ctx.dataset.label === 'AI予測（基本）')   return `AI予測: ${ctx.parsed.y}%`;
+                if (ctx.dataset.label === 'マネージャー補正後') return `補正後: ${ctx.parsed.y}%`;
                 return null;
               },
               afterBody: ctx => {
                 const h = parseInt(ctx[0].label);
                 const p = predictions.find(p => p && new Date(p.targetTs).getHours() === h);
                 if (!p?.factors) return [];
-                return [
+                const lines = [
                   '',
                   `天気影響: ×${p.factors.weatherMod}`,
                   `イベント影響: ×${p.factors.eventMod}`,
                   `曜日補正: ×${p.factors.dayTypeMod}`,
                 ];
+                if (p.factors.biasFactor && p.factors.biasFactor !== 1) {
+                  lines.push(`自己補正: ×${p.factors.biasFactor}`);
+                }
+                if (overrideMultiplier !== 1.0) {
+                  const pct = Math.round((overrideMultiplier - 1) * 100);
+                  lines.push(`補正値: ${pct > 0 ? '+' : ''}${pct}%`);
+                }
+                return lines;
               }
             }
           }
         }
       })
     });
+
+    // マネージャー補正ラインを追加（オーバーライドが設定されている場合のみ）
+    if (overrideMultiplier !== 1.0) {
+      const overrideData = predData.map(v =>
+        v !== null ? Math.max(1, Math.min(100, Math.round(v * overrideMultiplier))) : null
+      );
+      this._charts[canvasId].data.datasets.splice(1, 0, {
+        label: 'マネージャー補正後',
+        data: overrideData,
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.07)',
+        borderWidth: 2.5,
+        borderDash: [],
+        fill: false,
+        pointRadius: 4,
+        pointBackgroundColor: '#f59e0b',
+        spanGaps: true,
+        order: 0
+      });
+      // AI予測ラインのラベルを変更して区別
+      const aiDataset = this._charts[canvasId].data.datasets.find(d => d.label === 'AI予測');
+      if (aiDataset) aiDataset.label = 'AI予測（基本）';
+      this._charts[canvasId].update();
+    }
   }
 
   /**

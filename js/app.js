@@ -13,6 +13,10 @@ const App = (function () {
   let _currentPage = 1;
   const PAGE_SIZE = 20;
 
+  // マネージャー補正状態
+  let _overridePercent = 0;  // -50〜+50
+  let _overrideReason  = '';
+
   // -------- 初期化 --------
 
   async function init() {
@@ -75,6 +79,12 @@ const App = (function () {
 
     // 自動収集UI初期化
     _setupAutoCollector();
+
+    // マネージャー補正UI初期化
+    _setupOverrideUI();
+
+    // Ground Truth入力フォーム初期化
+    _setupGroundTruthForm();
 
     // ダッシュボード初期表示
     await _refreshDashboard();
@@ -161,6 +171,7 @@ const App = (function () {
     } else if (tabId === 'data') {
       _renderDataTable();
       _setupEventManagement();
+      _renderGroundTruthHistory();
     }
   }
 
@@ -265,6 +276,9 @@ const App = (function () {
 
     alertManager.refreshBadge();
     document.getElementById('active-alerts').textContent = dataManager.getUnreadAlertCount();
+
+    // 精度パネル更新
+    _renderAccuracyPanel(_currentZoneId);
   }
 
   function _updateSummaryCards(currentData, zone) {
@@ -316,9 +330,10 @@ const App = (function () {
       const predictions = await predictionEngine.predictDay(zoneId, targetDate);
       _predictionResults[zoneId] = predictions;
 
-      // 予測グラフ
+      // 予測グラフ（マネージャー補正を反映）
       const todayRecords = dataManager.getTodayData(zoneId);
-      chartManager.renderPredictionChart('prediction-chart', predictions, todayRecords);
+      const overrideMult = 1 + _overridePercent / 100;
+      chartManager.renderPredictionChart('prediction-chart', predictions, todayRecords, overrideMult);
 
       // 信頼度
       const avgConf = predictions.reduce((s, p) => s + (p?.confidence || 0), 0) / predictions.length;
@@ -702,6 +717,202 @@ const App = (function () {
     await _refreshDashboard();
     document.getElementById('last-update-time').textContent =
       new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // -------- 1. AI予測精度パネル --------
+
+  function _renderAccuracyPanel(zoneId) {
+    const stats = predictionEngine.getAccuracyStats(zoneId || null, 7);
+    const ringEl   = document.getElementById('accuracy-ring');
+    const scoreEl  = document.getElementById('accuracy-score');
+    const maeEl    = document.getElementById('accuracy-mae');
+    const biasEl   = document.getElementById('accuracy-bias');
+    const factorEl = document.getElementById('accuracy-bias-factor');
+    const samplesEl= document.getElementById('accuracy-samples');
+
+    if (!stats || stats.sampleCount === 0) {
+      // データなし
+      if (ringEl) ringEl.style.background = `conic-gradient(#334155 100%, #334155 100%)`;
+      if (scoreEl) scoreEl.textContent = '--';
+      if (maeEl)    maeEl.textContent    = '-- pt';
+      if (biasEl)   biasEl.textContent   = '--';
+      if (factorEl) factorEl.textContent = '1.00 ×';
+      if (samplesEl) samplesEl.textContent = '0 件';
+      return;
+    }
+
+    const pct = stats.accuracy;
+    const color = pct >= 90 ? '#10b981' : pct >= 75 ? '#6366f1' : pct >= 60 ? '#f59e0b' : '#ef4444';
+    if (ringEl) {
+      ringEl.style.background = `conic-gradient(${color} ${pct}%, #2d3f55 ${pct}%)`;
+    }
+    if (scoreEl)  scoreEl.textContent  = pct;
+    if (maeEl)    maeEl.textContent     = `${stats.mae} pt`;
+    if (biasEl) {
+      const biasSign = stats.bias > 0 ? '+' : '';
+      biasEl.textContent  = `${biasSign}${stats.bias} pt`;
+      biasEl.style.color  = Math.abs(stats.bias) > 5 ? '#f59e0b' : '#94a3b8';
+    }
+    if (factorEl) {
+      factorEl.textContent = `${stats.biasFactor.toFixed(2)} ×`;
+      factorEl.style.color = stats.biasFactor !== 1.0 ? '#6366f1' : '#94a3b8';
+    }
+    if (samplesEl) samplesEl.textContent = `${stats.sampleCount} 件`;
+  }
+
+  // -------- 2. マネージャー補正UI --------
+
+  function _setupOverrideUI() {
+    const slider     = document.getElementById('override-slider');
+    const badge      = document.getElementById('override-badge');
+    const reasonInput= document.getElementById('override-reason');
+    const reasonDisp = document.getElementById('override-reason-display');
+
+    if (!slider) return;
+
+    function _updateOverrideBadge(val) {
+      const pct = parseInt(val);
+      _overridePercent = pct;
+      const sign = pct > 0 ? '+' : '';
+      if (badge) {
+        badge.textContent  = `${sign}${pct}%`;
+        badge.className    = `override-badge ${pct > 0 ? 'positive' : pct < 0 ? 'negative' : 'neutral'}`;
+      }
+    }
+
+    slider.addEventListener('input', () => {
+      _updateOverrideBadge(slider.value);
+      // キャッシュ済みの予測があれば即座にグラフ更新
+      const zoneId = document.getElementById('pred-zone-select')?.value || _currentZoneId;
+      if (zoneId && _predictionResults[zoneId]) {
+        const todayRec = dataManager.getTodayData(zoneId);
+        chartManager.renderPredictionChart('prediction-chart', _predictionResults[zoneId], todayRec, 1 + _overridePercent / 100);
+      }
+    });
+
+    reasonInput?.addEventListener('input', () => {
+      _overrideReason = reasonInput.value;
+      if (reasonDisp) reasonDisp.textContent = reasonInput.value ? `（${reasonInput.value}）` : '';
+    });
+
+    // プリセットボタン
+    document.querySelectorAll('.override-preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = parseInt(btn.dataset.value);
+        slider.value = val;
+        _updateOverrideBadge(val);
+        slider.dispatchEvent(new Event('input'));
+      });
+    });
+
+    _updateOverrideBadge(0);
+  }
+
+  // -------- 3. Ground Truth入力フォーム --------
+
+  function _setupGroundTruthForm() {
+    // ゾーン選択肢を追加
+    const gtZone = document.getElementById('gt-zone');
+    if (gtZone) {
+      gtZone.innerHTML = _currentFacility.zones.map(z =>
+        `<option value="${z.id}">${z.name}</option>`
+      ).join('');
+    }
+
+    // 日時のデフォルト（直前の整時）
+    const gtDt = document.getElementById('gt-datetime');
+    if (gtDt) {
+      const now = new Date();
+      now.setMinutes(0, 0, 0);
+      gtDt.value = now.toISOString().slice(0, 16);
+    }
+
+    // ゾーン変更時に予測値を自動補完
+    gtZone?.addEventListener('change', _autofillPredictedLevel);
+    document.getElementById('gt-datetime')?.addEventListener('change', _autofillPredictedLevel);
+
+    // フォーム送信
+    document.getElementById('ground-truth-form')?.addEventListener('submit', e => {
+      e.preventDefault();
+      const zoneId    = document.getElementById('gt-zone').value;
+      const timestamp = new Date(document.getElementById('gt-datetime').value).getTime();
+      const predicted = parseInt(document.getElementById('gt-predicted').value);
+      const actual    = parseInt(document.getElementById('gt-actual').value);
+      const source    = document.getElementById('gt-source').value;
+      const notes     = document.getElementById('gt-notes').value;
+
+      dataManager.saveGroundTruth({ zoneId, timestamp, predictedLevel: predicted, actualLevel: actual, source, notes });
+      predictionEngine.clearCache();
+      showToast('実績値を保存しました。AIのバイアス補正を更新しました', 'success');
+
+      _renderGroundTruthHistory();
+      _renderAccuracyPanel(_currentZoneId);
+
+      // フォームリセット
+      document.getElementById('gt-actual').value = '';
+      document.getElementById('gt-notes').value = '';
+      _autofillPredictedLevel();
+    });
+
+    _renderGroundTruthHistory();
+  }
+
+  /** 予測キャッシュから予測値を自動補完 */
+  function _autofillPredictedLevel() {
+    const zoneId = document.getElementById('gt-zone')?.value;
+    const dtStr  = document.getElementById('gt-datetime')?.value;
+    const predInput = document.getElementById('gt-predicted');
+    if (!zoneId || !dtStr || !predInput) return;
+
+    const ts   = new Date(dtStr).getTime();
+    const hour = new Date(ts).getHours();
+    const preds = _predictionResults[zoneId];
+    if (!preds) return;
+
+    const match = preds.find(p => p && new Date(p.targetTs).getHours() === hour);
+    if (match) predInput.value = match.predictedLevel;
+  }
+
+  /** Ground Truth履歴リストを描画 */
+  function _renderGroundTruthHistory() {
+    const container = document.getElementById('gt-history-list');
+    if (!container) return;
+
+    const records = dataManager.getGroundTruth({ limit: 10 });
+    const zoneMap = {};
+    _currentFacility.zones.forEach(z => { zoneMap[z.id] = z.shortName || z.name; });
+
+    const inlineEl = document.getElementById('gt-accuracy-inline');
+    if (inlineEl) {
+      const stats = predictionEngine.getAccuracyStats(null, 7);
+      if (stats?.sampleCount > 0) {
+        inlineEl.textContent = `精度 ${stats.accuracy}% / ${stats.sampleCount}件`;
+        inlineEl.style.color = stats.accuracy >= 85 ? '#10b981' : '#f59e0b';
+      } else {
+        inlineEl.textContent = '';
+      }
+    }
+
+    if (records.length === 0) {
+      container.innerHTML = '<div class="empty-state"><p>まだ実績値がありません</p></div>';
+      return;
+    }
+
+    const srcLabel = { manual: '手動', pos: 'POS', iot: 'IoT' };
+    container.innerHTML = records.map(r => {
+      const err   = r.predictedLevel - r.actualLevel;
+      const errColor = Math.abs(err) <= 5 ? '#10b981' : Math.abs(err) <= 15 ? '#f59e0b' : '#ef4444';
+      return `
+        <div class="gt-record-item">
+          <span class="gt-zone">${zoneMap[r.zoneId] || r.zoneId}</span>
+          <span class="gt-time">${formatDateTime(r.timestamp)}</span>
+          <span class="gt-pred">予測 ${r.predictedLevel}%</span>
+          <span class="gt-arrow">→</span>
+          <span class="gt-actual">実績 ${r.actualLevel}%</span>
+          <span class="gt-error" style="color:${errColor}">${err > 0 ? '+' : ''}${err}pt</span>
+          <span class="gt-src">${srcLabel[r.source] || r.source}</span>
+        </div>`;
+    }).join('');
   }
 
   // -------- 自動収集 --------

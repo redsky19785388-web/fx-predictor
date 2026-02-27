@@ -1433,3 +1433,319 @@ textarea.form-control { resize: vertical; }
 @media (max-width: 768px) {
   .auto-collect-layout { grid-template-columns: 1fr; }
 }
+
+/* ======================================================
+   FEATURE 1: AI精度スコアパネル
+   ====================================================== */
+
+.accuracy-panel { margin-bottom: 16px; }
+
+.accuracy-panel-body {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+/* 円形ゲージ */
+.accuracy-gauge-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.accuracy-ring {
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: conic-gradient(#334155 100%, #334155 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: background 0.6s ease;
+}
+
+.accuracy-ring-inner {
+  width: 66px;
+  height: 66px;
+  background: var(--bg-card);
+  border-radius: 50%;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 1px;
+  position: absolute;
+}
+
+.accuracy-score-num {
+  font-size: 22px;
+  font-weight: 800;
+  color: var(--text);
+  font-family: var(--font-mono);
+  line-height: 1;
+}
+
+.accuracy-score-pct {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.accuracy-ring-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+/* 統計グリッド */
+.accuracy-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 20px;
+  flex: 1;
+  min-width: 200px;
+}
+
+.accuracy-stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.ast-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.ast-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+/* CTA */
+.accuracy-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 20px;
+  background: rgba(99, 102, 241, 0.06);
+  border: 1px dashed rgba(99, 102, 241, 0.3);
+  border-radius: 10px;
+  text-align: center;
+  min-width: 160px;
+}
+
+.accuracy-cta-icon { font-size: 24px; }
+
+.accuracy-cta p {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.btn-link {
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.btn-link:hover { color: #818cf8; }
+
+/* ======================================================
+   FEATURE 2: マネージャー補正UI
+   ====================================================== */
+
+.override-panel { margin-bottom: 16px; }
+
+.override-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+.override-value-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.override-label-text {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.override-badge {
+  font-size: 18px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  padding: 3px 12px;
+  border-radius: 20px;
+  transition: background 0.2s, color 0.2s;
+}
+.override-badge.neutral  { color: var(--text-muted); background: rgba(148,163,184,0.1); }
+.override-badge.positive { color: #f59e0b;  background: rgba(245,158,11,0.12); }
+.override-badge.negative { color: #ef4444;  background: rgba(239,68,68,0.12); }
+
+.override-reason-display {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* スライダー */
+.override-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  border-radius: 3px;
+  background: linear-gradient(to right, #ef4444 0%, #334155 50%, #f59e0b 100%);
+  outline: none;
+  cursor: pointer;
+}
+
+.override-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--text);
+  border: 2px solid var(--primary);
+  cursor: grab;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+  transition: transform 0.1s;
+}
+.override-slider::-webkit-slider-thumb:active { transform: scale(1.2); cursor: grabbing; }
+
+.override-scale {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-top: 6px;
+}
+
+.override-right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.override-reason-input { font-size: 12px; }
+
+.override-presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.override-preset-label {
+  font-size: 11px;
+  color: var(--text-dim);
+  flex: 0 0 100%;
+}
+
+.override-preset-btn {
+  padding: 4px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.override-preset-btn.negative:hover { border-color: #ef4444; color: #ef4444; }
+.override-preset-btn.positive:hover { border-color: #f59e0b; color: #f59e0b; }
+.override-preset-btn.neutral:hover  { border-color: var(--text); color: var(--text); }
+
+/* ======================================================
+   FEATURE 3: Ground Truth 入力パネル
+   ====================================================== */
+
+.gt-panel { margin-bottom: 16px; }
+
+.gt-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.gt-history-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.gt-accuracy-inline {
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.gt-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.gt-record-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 11px;
+}
+
+.gt-zone { font-weight: 700; color: var(--text); }
+.gt-time { color: var(--text-dim); font-size: 10px; }
+.gt-pred { color: var(--text-muted); font-family: var(--font-mono); }
+.gt-arrow { color: var(--text-dim); }
+.gt-actual { color: var(--text); font-weight: 700; font-family: var(--font-mono); }
+.gt-error { font-family: var(--font-mono); font-weight: 700; font-size: 11px; }
+.gt-src {
+  font-size: 9px;
+  padding: 2px 6px;
+  background: rgba(99,102,241,0.1);
+  color: var(--primary);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+@media (max-width: 900px) {
+  .accuracy-panel-body { flex-direction: column; align-items: flex-start; }
+  .override-layout  { grid-template-columns: 1fr; }
+  .gt-layout        { grid-template-columns: 1fr; }
+}
