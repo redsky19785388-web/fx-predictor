@@ -43,12 +43,16 @@ class FloorPlan {
 
     // Leaflet マップ初期化
     const mapCfg = (CONFIG && CONFIG.map) || {};
-    const center = (mapCfg.center) || { lat: 35.7130, lng: 139.7730 };
+    // center は配列 [lat,lng] またはオブジェクト { lat, lng } どちらでも対応
+    const rawCenter = mapCfg.center || [35.7130, 139.7730];
+    const centerArr = Array.isArray(rawCenter)
+      ? rawCenter
+      : [rawCenter.lat, rawCenter.lng];
     const zoom   = mapCfg.zoom   || 16;
     const tileUrl= mapCfg.tileUrl|| 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 
     this._map = L.map(containerId, {
-      center: [center.lat, center.lng],
+      center: centerArr,
       zoom,
       zoomControl: true,
       attributionControl: false,

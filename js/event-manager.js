@@ -1,5 +1,5 @@
 /**
- * event-manager.js - 上野公園ローカルイベント手動管理システム v2.0
+ * event-manager.js - 上野公園ローカルイベント手動管理システム v2.1
  * 店舗管理者がダッシュボードから直接イベントを登録・編集・削除できるCRUDシステム
  */
 
@@ -8,24 +8,10 @@ class EventManager {
     this.EVENTS_KEY = 'crowdsense_ueno_events_v2';
     this._events = null;
   }
-}
 
-EventManager.EVENT_TYPES = [
-  { id: 'cherry_blossom', label: '🌸 桜・お花見情報',      defaultImpact: 2.0 },
-  { id: 'exhibition',     label: '🎨 展覧会・特別展',       defaultImpact: 1.4 },
-  { id: 'festival',       label: '🎉 祭り・フェスティバル',  defaultImpact: 1.6 },
-  { id: 'fireworks',      label: '🎆 花火大会',             defaultImpact: 1.8 },
-  { id: 'concert',        label: '🎵 コンサート・音楽',      defaultImpact: 1.5 },
-  { id: 'school',         label: '🏫 学校行事・遠足',        defaultImpact: 1.3 },
-  { id: 'holiday',        label: '🎌 祝日・連休',           defaultImpact: 1.4 },
-  { id: 'sale',           label: '📢 セール・キャンペーン',  defaultImpact: 1.3 },
-  { id: 'sports',         label: '⚽ スポーツイベント',      defaultImpact: 1.2 },
-  { id: 'other',          label: '📅 その他',               defaultImpact: 1.2 }
-];
-
-EventManager.prototype = {
-  constructor: EventManager,
-
+  // ----------------------------------------------------------------
+  // 初期化
+  // ----------------------------------------------------------------
   init() {
     this._events = this._loadEvents();
     if (this._events.length === 0) {
@@ -33,21 +19,21 @@ EventManager.prototype = {
       this._saveEvents();
     }
     console.log(`[EventManager] ${this._events.length}件のイベントを読み込みました`);
-  },
+  }
 
   _loadEvents() {
     try {
       const raw = localStorage.getItem(this.EVENTS_KEY);
       return raw ? JSON.parse(raw) : [];
     } catch(e) { return []; }
-  },
+  }
 
   _saveEvents() {
     localStorage.setItem(this.EVENTS_KEY, JSON.stringify(this._events));
-  },
+  }
 
   // ----------------------------------------------------------------
-  // サンプルイベント生成
+  // サンプルイベント生成（上野公園特有）
   // ----------------------------------------------------------------
   _generateSampleUenoEvents() {
     const year = new Date().getFullYear();
@@ -64,7 +50,7 @@ EventManager.prototype = {
         '東京都美術館 特別展「印象派の巨匠たち」',
         '毎年恒例の大型企画展。入場者が周辺カフェ・通路に波及します。',
         'exhibition',
-        ['zone_art_museum','zone_zoo_cafe'],
+        ['zone_art_museum', 'zone_zoo_cafe'],
         1.45,
         `${year}-03-15`, `${year}-06-30`, 9, 18
       ),
@@ -72,7 +58,7 @@ EventManager.prototype = {
         '上野恩賜公園 桜まつり',
         '例年3月下旬〜4月上旬が見頃。公園全体で極端な混雑が予想されます。',
         'cherry_blossom',
-        ['zone_sakura_path','zone_zoo_cafe','zone_shinobazu_boat','zone_toshogu'],
+        ['zone_sakura_path', 'zone_zoo_cafe', 'zone_shinobazu_boat', 'zone_toshogu'],
         2.5,
         `${year}-03-25`, `${year}-04-10`, 6, 21
       ),
@@ -80,7 +66,7 @@ EventManager.prototype = {
         '上野東照宮 ぼたん祭り',
         '春のぼたん苑開園。境内・周辺参道への参拝客が増加します。',
         'festival',
-        ['zone_toshogu','zone_zoo_cafe'],
+        ['zone_toshogu', 'zone_zoo_cafe'],
         1.6,
         `${year}-04-10`, `${year}-05-06`, 9, 17
       ),
@@ -88,23 +74,23 @@ EventManager.prototype = {
         '上野動物園 GW特別開園',
         'GW中は入園者数が通常比180%。カフェ・博物館周辺も大混雑します。',
         'holiday',
-        ['zone_zoo_cafe','zone_sakura_path','zone_national_museum'],
+        ['zone_zoo_cafe', 'zone_sakura_path', 'zone_national_museum'],
         1.8,
         `${year}-04-29`, `${year}-05-06`, 9, 17
       )
     ].filter(e => !isNaN(e.startTs) && !isNaN(e.endTs));
-  },
+  }
 
   // ----------------------------------------------------------------
   // CRUD
   // ----------------------------------------------------------------
   getAllEvents() {
-    return [...this._events].sort((a,b) => a.startTs - b.startTs);
-  },
+    return [...this._events].sort((a, b) => a.startTs - b.startTs);
+  }
 
   addEvent(eventData) {
     const ev = {
-      id: `evt_${Date.now()}_${Math.random().toString(36).substr(2,6)}`,
+      id:            `evt_${Date.now()}_${Math.random().toString(36).substr(2,6)}`,
       name:          eventData.name,
       description:   eventData.description || '',
       type:          eventData.type || 'other',
@@ -117,7 +103,7 @@ EventManager.prototype = {
     this._events.push(ev);
     this._saveEvents();
     return ev;
-  },
+  }
 
   editEvent(eventId, updates) {
     const idx = this._events.findIndex(e => e.id === eventId);
@@ -125,21 +111,21 @@ EventManager.prototype = {
     this._events[idx] = { ...this._events[idx], ...updates, updatedAt: Date.now() };
     this._saveEvents();
     return this._events[idx];
-  },
+  }
 
   deleteEvent(eventId) {
     const before = this._events.length;
     this._events = this._events.filter(e => e.id !== eventId);
     if (this._events.length < before) { this._saveEvents(); return true; }
     return false;
-  },
+  }
 
   getEventById(id) {
     return this._events.find(e => e.id === id) || null;
-  },
+  }
 
   // ----------------------------------------------------------------
-  // Query
+  // クエリ
   // ----------------------------------------------------------------
   /** 特定日時・ゾーンに関連するイベントを取得 */
   getEventsForDatetime(timestamp, zoneId = null) {
@@ -150,7 +136,7 @@ EventManager.prototype = {
       }
       return true;
     });
-  },
+  }
 
   /** 今後n日間のイベント */
   getUpcomingEvents(days = 14) {
@@ -158,8 +144,8 @@ EventManager.prototype = {
     const cutoff = now + days * 24 * 60 * 60 * 1000;
     return this._events
       .filter(e => e.endTs > now && e.startTs < cutoff)
-      .sort((a,b) => a.startTs - b.startTs);
-  },
+      .sort((a, b) => a.startTs - b.startTs);
+  }
 
   /** イベント影響係数（ゾーン考慮） */
   getEventModifier(events, zoneId = null) {
@@ -173,10 +159,10 @@ EventManager.prototype = {
       maxImpact = Math.max(maxImpact, impact);
     }
     return Math.min(3.5, maxImpact);
-  },
+  }
 
   // ----------------------------------------------------------------
-  // UI Helpers
+  // UIヘルパー
   // ----------------------------------------------------------------
   getEventTypeIcon(type) {
     const icons = {
@@ -185,17 +171,16 @@ EventManager.prototype = {
       holiday: '🎌', sale: '📢', sports: '⚽', other: '📅'
     };
     return icons[type] || '📅';
-  },
+  }
 
   getEventTypeLabel(type) {
     const t = EventManager.EVENT_TYPES.find(t => t.id === type);
     return t ? t.label : '不明';
-  },
+  }
 
-  /** イベントのサイズラベル（互換性のため残す） */
   getEventSizeLabel(size) {
     return { large: '大型', medium: '中型', small: '小型' }[size] || '';
-  },
+  }
 
   // ----------------------------------------------------------------
   // フォーム描画
@@ -204,7 +189,8 @@ EventManager.prototype = {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    const zoneOptions = (CONFIG.defaultFacility.zones || []).map(z =>
+    const zones   = (CONFIG && CONFIG.defaultFacility && CONFIG.defaultFacility.zones) || [];
+    const zoneOptions = zones.map(z =>
       `<label class="checkbox-label zone-check">
         <input type="checkbox" name="affectedZones" value="${z.id}">
         <span class="zone-dot" style="background:${z.color}"></span>
@@ -263,10 +249,9 @@ EventManager.prototype = {
       </form>`;
 
     this._bindFormEvents();
-  },
+  }
 
   _bindFormEvents() {
-    // Impact スライダー
     const slider = document.getElementById('event-impact');
     const valEl  = document.getElementById('event-impact-value');
     if (slider && valEl) {
@@ -275,7 +260,6 @@ EventManager.prototype = {
         valEl.textContent = `×${v.toFixed(2)}（+${Math.round((v-1)*100)}%増）`;
       });
     }
-    // カテゴリ変更でデフォルト係数を反映
     const typeEl = document.getElementById('event-type');
     if (typeEl && slider) {
       typeEl.addEventListener('change', () => {
@@ -285,13 +269,11 @@ EventManager.prototype = {
         slider.dispatchEvent(new Event('input'));
       });
     }
-    // フォーム送信
     const form = document.getElementById('event-entry-form');
     if (form) form.addEventListener('submit', e => { e.preventDefault(); this._handleFormSubmit(); });
-    // キャンセル
     const cancelBtn = document.getElementById('btn-event-cancel');
     if (cancelBtn) cancelBtn.addEventListener('click', () => this._resetForm());
-  },
+  }
 
   _handleFormSubmit() {
     const editId = document.getElementById('event-edit-id')?.value;
@@ -321,7 +303,7 @@ EventManager.prototype = {
     }
     this._resetForm();
     this.renderEventList('event-manage-list');
-  },
+  }
 
   _resetForm() {
     const form = document.getElementById('event-entry-form');
@@ -334,11 +316,8 @@ EventManager.prototype = {
     if (cancelBtn) cancelBtn.style.display = 'none';
     const slider = document.getElementById('event-impact');
     const valEl  = document.getElementById('event-impact-value');
-    if (slider && valEl) {
-      slider.value = 1.3;
-      valEl.textContent = '×1.30（+30%増）';
-    }
-  },
+    if (slider && valEl) { slider.value = 1.3; valEl.textContent = '×1.30（+30%増）'; }
+  }
 
   startEdit(eventId) {
     const evt = this.getEventById(eventId);
@@ -348,12 +327,13 @@ EventManager.prototype = {
       d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
       return d.toISOString().slice(0,16);
     };
-    document.getElementById('event-edit-id').value    = evt.id;
-    document.getElementById('event-name').value       = evt.name;
-    document.getElementById('event-type').value       = evt.type;
-    document.getElementById('event-description').value= evt.description || '';
-    document.getElementById('event-start').value      = toLocal(evt.startTs);
-    document.getElementById('event-end').value        = toLocal(evt.endTs);
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+    set('event-edit-id',    evt.id);
+    set('event-name',       evt.name);
+    set('event-type',       evt.type);
+    set('event-description',evt.description || '');
+    set('event-start',      toLocal(evt.startTs));
+    set('event-end',        toLocal(evt.endTs));
     const slider = document.getElementById('event-impact');
     if (slider) { slider.value = evt.impact; slider.dispatchEvent(new Event('input')); }
     document.querySelectorAll('input[name="affectedZones"]').forEach(cb => {
@@ -365,7 +345,7 @@ EventManager.prototype = {
     if (cancelBtn) cancelBtn.style.display = 'inline-flex';
     document.getElementById('event-entry-form')
       ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  },
+  }
 
   // ----------------------------------------------------------------
   // イベント一覧描画
@@ -380,23 +360,26 @@ EventManager.prototype = {
         <div class="empty-state">
           <div class="empty-icon">📅</div>
           <p>登録されたイベントはありません</p>
-          <small>上のフォームからイベントを追加してください</small>
+          <small>左のフォームからイベントを追加してください</small>
         </div>`;
       return;
     }
 
     const now = Date.now();
+    const zones = (CONFIG && CONFIG.defaultFacility && CONFIG.defaultFacility.zones) || [];
     container.innerHTML = events.map(evt => {
       const isActive  = now >= evt.startTs && now <= evt.endTs;
       const isPast    = now > evt.endTs;
       const statusCls = isActive ? 'active' : isPast ? 'past' : 'upcoming';
       const statusLbl = isActive ? '開催中' : isPast ? '終了' : '予定';
       const pct       = Math.round((evt.impact - 1) * 100);
-      const zones     = (evt.affectedZones || []).map(zid => {
-        const z = (CONFIG.defaultFacility.zones || []).find(z => z.id === zid);
+      const zoneTags  = (evt.affectedZones || []).map(zid => {
+        const z = zones.find(z => z.id === zid);
         return z ? `<span class="zone-tag" style="border-color:${z.color};color:${z.color}">${z.name}</span>` : '';
       }).join('');
-      const fmtTs = ts => new Date(ts).toLocaleString('ja-JP',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+      const fmtTs = ts => new Date(ts).toLocaleString('ja-JP',
+        { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+
       return `
         <div class="event-manage-item ${statusCls}" data-id="${evt.id}">
           <div class="event-manage-header">
@@ -406,7 +389,7 @@ EventManager.prototype = {
           </div>
           <div class="event-manage-dates">📅 ${fmtTs(evt.startTs)} 〜 ${fmtTs(evt.endTs)}</div>
           ${evt.description ? `<p class="event-manage-desc">${evt.description}</p>` : ''}
-          ${zones ? `<div class="event-manage-zones">${zones}</div>` : ''}
+          ${zoneTags ? `<div class="event-manage-zones">${zoneTags}</div>` : ''}
           <div class="event-manage-footer">
             <span class="event-impact-badge">来客予測 +${pct}%</span>
             <div class="event-actions">
@@ -416,7 +399,7 @@ EventManager.prototype = {
           </div>
         </div>`;
     }).join('');
-  },
+  }
 
   _confirmDelete(eventId) {
     const evt = this.getEventById(eventId);
@@ -426,6 +409,22 @@ EventManager.prototype = {
     showToast('イベントを削除しました', 'info');
     this.renderEventList('event-manage-list');
   }
-};
+}
+
+// ----------------------------------------------------------------
+// イベントカテゴリ定義（static）
+// ----------------------------------------------------------------
+EventManager.EVENT_TYPES = [
+  { id: 'cherry_blossom', label: '🌸 桜・お花見情報',      defaultImpact: 2.0 },
+  { id: 'exhibition',     label: '🎨 展覧会・特別展',       defaultImpact: 1.4 },
+  { id: 'festival',       label: '🎉 祭り・フェスティバル',  defaultImpact: 1.6 },
+  { id: 'fireworks',      label: '🎆 花火大会',             defaultImpact: 1.8 },
+  { id: 'concert',        label: '🎵 コンサート・音楽',      defaultImpact: 1.5 },
+  { id: 'school',         label: '🏫 学校行事・遠足',        defaultImpact: 1.3 },
+  { id: 'holiday',        label: '🎌 祝日・連休',           defaultImpact: 1.4 },
+  { id: 'sale',           label: '📢 セール・キャンペーン',  defaultImpact: 1.3 },
+  { id: 'sports',         label: '⚽ スポーツイベント',      defaultImpact: 1.2 },
+  { id: 'other',          label: '📅 その他',               defaultImpact: 1.2 }
+];
 
 window.eventManager = new EventManager();
