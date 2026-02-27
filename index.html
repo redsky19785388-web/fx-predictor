@@ -46,6 +46,7 @@
       <button id="btn-generate-dummy" class="sidebar-btn primary">📊 テストデータ生成</button>
       <button id="btn-run-prediction" class="sidebar-btn">🔮 予測を実行</button>
       <button id="btn-export-data" class="sidebar-btn">📥 データエクスポート</button>
+      <button id="btn-toggle-autocollect" class="sidebar-btn autocollect-btn">🌐 自動収集: OFF</button>
     </div>
 
     <div class="sidebar-footer">
@@ -384,6 +385,67 @@
 
       </div><!-- /data-grid -->
 
+      <!-- Auto Collection Panel -->
+      <div class="panel" id="auto-collect-panel">
+        <div class="panel-header">
+          <h2>🌐 リアルデータ自動収集</h2>
+          <span class="panel-subtitle" id="auto-collect-api-status">外部APIから自動取得</span>
+        </div>
+        <div class="panel-body">
+          <div class="auto-collect-layout">
+
+            <!-- Status -->
+            <div class="auto-collect-status-box">
+              <div class="ac-status-row">
+                <span class="ac-label">収集状態</span>
+                <span id="ac-status-badge" class="ac-badge stopped">停止中</span>
+              </div>
+              <div class="ac-status-row">
+                <span class="ac-label">最終収集</span>
+                <span id="ac-last-collected">--</span>
+              </div>
+              <div class="ac-status-row">
+                <span class="ac-label">累計収集数</span>
+                <span id="ac-total-collected">0件</span>
+              </div>
+              <div class="ac-datasources" id="ac-datasources">
+                <div class="ac-ds-item">
+                  <span class="ac-ds-icon">☁️</span>
+                  <span class="ac-ds-name">天気 (Open-Meteo)</span>
+                  <span class="ac-ds-status pending" id="ds-weather-status">待機中</span>
+                </div>
+                <div class="ac-ds-item">
+                  <span class="ac-ds-icon">📅</span>
+                  <span class="ac-ds-name">祝日 (holidays-jp)</span>
+                  <span class="ac-ds-status pending" id="ds-holiday-status">待機中</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="auto-collect-controls">
+              <div class="form-group">
+                <label>収集間隔</label>
+                <select id="ac-interval" class="form-control">
+                  <option value="10">10分ごと</option>
+                  <option value="30" selected>30分ごと（推奨）</option>
+                  <option value="60">1時間ごと</option>
+                </select>
+              </div>
+              <button id="btn-ac-start" class="btn-primary full-width">▶ 自動収集を開始</button>
+              <button id="btn-ac-stop" class="btn-secondary full-width" disabled>⏹ 停止</button>
+              <button id="btn-ac-now" class="btn-secondary full-width">⚡ 今すぐ1回収集</button>
+              <p class="ac-description">
+                現在の天気（Open-Meteo）と祝日カレンダー（holidays-jp）を組み合わせ、
+                各ゾーンの混雑度を自動推定してデータを蓄積します。
+                蓄積データが増えるほど予測精度が向上します。
+              </p>
+            </div>
+
+          </div>
+        </div>
+      </div><!-- /auto-collect-panel -->
+
       <!-- Event Management -->
       <div class="panel event-management-panel">
         <div class="panel-header">
@@ -573,6 +635,8 @@
 <script src="js/data-manager.js"></script>
 <script src="js/dummy-generator.js"></script>
 <script src="js/weather-client.js"></script>
+<script src="js/holiday-client.js"></script>
+<script src="js/auto-collector.js"></script>
 <script src="js/event-manager.js"></script>
 <script src="js/prediction-engine.js"></script>
 <script src="js/floor-plan.js"></script>

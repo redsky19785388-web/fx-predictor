@@ -68,6 +68,14 @@ const App = (function () {
     // 天気取得
     _fetchWeather();
 
+    // 祝日データ取得
+    holidayClient.fetchHolidays().then(() => {
+      _updateDataSourceStatus();
+    });
+
+    // 自動収集UI初期化
+    _setupAutoCollector();
+
     // ダッシュボード初期表示
     await _refreshDashboard();
 
@@ -171,6 +179,10 @@ const App = (function () {
       _runPrediction();
     });
     document.getElementById('btn-export-data')?.addEventListener('click', _exportData);
+    document.getElementById('btn-toggle-autocollect')?.addEventListener('click', () => {
+      switchTab('data');
+      document.getElementById('auto-collect-panel')?.scrollIntoView({ behavior: 'smooth' });
+    });
 
     // 予測実行ボタン
     document.getElementById('btn-run-pred')?.addEventListener('click', _runPrediction);
@@ -690,6 +702,86 @@ const App = (function () {
     await _refreshDashboard();
     document.getElementById('last-update-time').textContent =
       new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // -------- 自動収集 --------
+
+  function _setupAutoCollector() {
+    const btnStart  = document.getElementById('btn-ac-start');
+    const btnStop   = document.getElementById('btn-ac-stop');
+    const btnNow    = document.getElementById('btn-ac-now');
+    const btnToggle = document.getElementById('btn-toggle-autocollect');
+
+    btnStart?.addEventListener('click', async () => {
+      const intervalMin = parseInt(document.getElementById('ac-interval')?.value || '30');
+      await autoCollector.start(intervalMin * 60 * 1000);
+      _updateAutoCollectUI(autoCollector.getStatus());
+    });
+
+    btnStop?.addEventListener('click', () => {
+      autoCollector.stop();
+      _updateAutoCollectUI(autoCollector.getStatus());
+    });
+
+    btnNow?.addEventListener('click', async () => {
+      showToast('収集中...', 'info', 3000);
+      btnNow.disabled = true;
+      await autoCollector._collect();
+      btnNow.disabled = false;
+      _updateAutoCollectUI(autoCollector.getStatus());
+      _renderDataTable();
+      _refreshDashboard();
+      showToast('収集完了', 'success');
+    });
+
+    autoCollector.onStatusChange(status => {
+      _updateAutoCollectUI(status);
+      _renderDataTable();
+      _refreshDashboard();
+    });
+  }
+
+  function _updateAutoCollectUI(status) {
+    const badge   = document.getElementById('ac-status-badge');
+    const lastEl  = document.getElementById('ac-last-collected');
+    const totalEl = document.getElementById('ac-total-collected');
+    const btnStart  = document.getElementById('btn-ac-start');
+    const btnStop   = document.getElementById('btn-ac-stop');
+    const btnToggle = document.getElementById('btn-toggle-autocollect');
+
+    if (badge) {
+      badge.textContent = status.isRunning ? '収集中' : '停止中';
+      badge.className   = `ac-badge ${status.isRunning ? 'running' : 'stopped'}`;
+    }
+    if (lastEl) {
+      lastEl.textContent = status.lastCollected
+        ? new Date(status.lastCollected).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })
+        : '--';
+    }
+    if (totalEl) totalEl.textContent = `${status.totalCollected}件`;
+    if (btnStart) btnStart.disabled = status.isRunning;
+    if (btnStop)  btnStop.disabled  = !status.isRunning;
+    if (btnToggle) {
+      btnToggle.textContent = `🌐 自動収集: ${status.isRunning ? 'ON' : 'OFF'}`;
+      btnToggle.style.background = status.isRunning ? '#10b981' : '';
+    }
+
+    _updateDataSourceStatus();
+  }
+
+  function _updateDataSourceStatus() {
+    const weatherEl  = document.getElementById('ds-weather-status');
+    const holidayEl  = document.getElementById('ds-holiday-status');
+    if (weatherEl) {
+      const ok = weatherClient.isDataAvailable();
+      weatherEl.textContent  = ok ? '接続済み' : '待機中';
+      weatherEl.className    = `ac-ds-status ${ok ? 'active' : 'pending'}`;
+    }
+    if (holidayEl) {
+      const ok = holidayClient.isLoaded();
+      holidayEl.textContent  = ok ? '取得済み' : '待機中';
+      holidayEl.className    = `ac-ds-status ${ok ? 'active' : 'pending'}`;
+    }
   }
 
   // -------- 公開API --------

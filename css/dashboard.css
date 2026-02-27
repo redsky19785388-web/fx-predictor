@@ -1327,3 +1327,109 @@ textarea.form-control { resize: vertical; }
   .leaflet-map-container { height: 280px; }
 }
 
+
+/* ======================================================
+   AUTO COLLECTOR UI
+   ====================================================== */
+
+.autocollect-btn {
+  border: 1px solid var(--border);
+  transition: background 0.2s, border-color 0.2s;
+}
+
+.auto-collect-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.auto-collect-status-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ac-status-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.ac-label { color: var(--text-muted); }
+
+.ac-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+.ac-badge.running {
+  background: rgba(16,185,129,0.15);
+  color: var(--success);
+  border: 1px solid var(--success);
+}
+.ac-badge.stopped {
+  background: rgba(148,163,184,0.1);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+.ac-datasources {
+  margin-top: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ac-ds-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.ac-ds-name { flex: 1; color: var(--text-muted); }
+
+.ac-ds-status {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+.ac-ds-status.active  { background: rgba(16,185,129,0.15); color: var(--success); }
+.ac-ds-status.pending { background: rgba(148,163,184,0.08); color: var(--text-dim); }
+
+.auto-collect-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ac-description {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  margin-top: 4px;
+}
+
+.btn-secondary {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.15s;
+}
+.btn-secondary:hover:not(:disabled)  { border-color: var(--primary); color: var(--primary); }
+.btn-secondary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .auto-collect-layout { grid-template-columns: 1fr; }
+}

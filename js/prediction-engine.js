@@ -177,11 +177,13 @@ class PredictionEngine {
     return isWeekend ? base * 1.35 : base;
   }
 
-  /** ② 曜日タイプモディファイア */
+  /** ② 曜日タイプモディファイア（リアル祝日API対応） */
   _getDayTypeModifier(date) {
     const dow     = date.getDay();
     const dateStr = date.toISOString().split('T')[0];
-    const isHoliday = dummyGenerator?.holidays?.has(dateStr);
+    // holidayClient（リアルAPI）→ dummyGenerator（フォールバック）の順で祝日判定
+    const isHoliday = (window.holidayClient?.isHoliday(dateStr)) ||
+                      (window.dummyGenerator?.holidays?.has(dateStr));
     if (isHoliday) return 1.55;
     if (dow === 0 || dow === 6) return 1.40; // 週末
     const weekdayMods = [1.0, 0.88, 0.86, 0.88, 0.92, 1.08, 1.0];
