@@ -1749,3 +1749,289 @@ textarea.form-control { resize: vertical; }
   .override-layout  { grid-template-columns: 1fr; }
   .gt-layout        { grid-template-columns: 1fr; }
 }
+
+/* ======================================================
+   v3.0: リアルタイム・コンテキスト統合
+   ====================================================== */
+
+.rt-context-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.rt-panel {}
+
+.rt-last-updated {
+  font-size: 10px;
+  color: var(--text-dim);
+}
+
+/* 交通機関リスト */
+.rt-transit-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rt-transit-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+}
+
+.rt-transit-icon { font-size: 16px; flex-shrink: 0; }
+.rt-transit-name {
+  flex: 1;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rt-transit-status {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+}
+.rt-transit-status.normal       { background: rgba(16,185,129,0.15); color: #10b981; }
+.rt-transit-status.minor_delay  { background: rgba(245,158,11,0.15); color: #f59e0b; }
+.rt-transit-status.major_delay  { background: rgba(249,115,22,0.2);  color: #f97316; }
+.rt-transit-status.suspended    { background: rgba(239,68,68,0.2);   color: #ef4444; }
+
+/* 近隣施設リスト */
+.rt-nearby-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rt-nearby-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rt-nearby-icon { font-size: 18px; flex-shrink: 0; }
+.rt-nearby-info { flex: 1; min-width: 0; }
+.rt-nearby-name {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin-bottom: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.rt-nearby-bar-wrap { position: relative; height: 6px; background: rgba(255,255,255,0.07); border-radius: 3px; }
+.rt-nearby-bar      { height: 100%; border-radius: 3px; transition: width 0.4s ease; }
+.rt-nearby-pct      { font-size: 11px; color: var(--text-dim); flex-shrink: 0; width: 36px; text-align: right; }
+
+/* SNSトレンドリスト */
+.rt-sns-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-content: flex-start;
+}
+
+.rt-sns-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(99,102,241,0.1);
+  border: 1px solid rgba(99,102,241,0.25);
+  color: var(--primary);
+  cursor: default;
+  transition: background 0.2s;
+}
+.rt-sns-chip.trending {
+  background: rgba(99,102,241,0.2);
+  border-color: var(--primary);
+}
+.rt-sns-arrow { font-size: 10px; }
+.rt-sns-arrow.up   { color: #10b981; }
+.rt-sns-arrow.down { color: #ef4444; }
+
+/* ======================================================
+   v3.0: 動的ペルソナ推計パネル
+   ====================================================== */
+
+.persona-panel { margin-bottom: 16px; }
+
+.persona-layout {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+
+/* ペルソナバー */
+.persona-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.persona-bar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.persona-bar-icon  { font-size: 18px; width: 24px; text-align: center; flex-shrink: 0; }
+.persona-bar-label { font-size: 12px; color: var(--text-muted); width: 180px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.persona-bar-track { flex: 1; height: 10px; background: rgba(255,255,255,0.07); border-radius: 5px; position: relative; }
+.persona-bar-fill  { height: 100%; border-radius: 5px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+.persona-bar-pct   { font-size: 12px; font-weight: 700; width: 36px; text-align: right; flex-shrink: 0; }
+
+/* 上位ペルソナカード */
+.persona-top-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.persona-card {
+  padding: 12px 14px;
+  border-radius: 10px;
+  border-left: 4px solid transparent;
+  background: rgba(255,255,255,0.03);
+  border-top: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.persona-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.persona-card-icon  { font-size: 20px; }
+.persona-card-label { font-size: 12px; font-weight: 700; color: var(--text-main); flex: 1; }
+.persona-card-pct   {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.persona-card-desc {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+
+.persona-card.rank-1 { border-left-width: 4px; }
+.persona-card.rank-2 { opacity: 0.9; }
+.persona-card.rank-3 { opacity: 0.8; }
+
+/* ======================================================
+   v3.0: アクション提案パネル
+   ====================================================== */
+
+.action-panel { margin-bottom: 16px; }
+
+.action-panel-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.action-suggestions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.action-card {
+  padding: 16px;
+  border-radius: 12px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: box-shadow 0.2s;
+}
+
+.action-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+
+.action-card.priority-urgent {
+  border-left: 4px solid #ef4444;
+  background: rgba(239,68,68,0.06);
+}
+.action-card.priority-recommended {
+  border-left: 4px solid #f59e0b;
+  background: rgba(245,158,11,0.06);
+}
+.action-card.priority-info {
+  border-left: 4px solid #6366f1;
+  background: rgba(99,102,241,0.06);
+}
+
+.action-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.action-card-icon  { font-size: 22px; flex-shrink: 0; line-height: 1; }
+
+.action-card-meta  { flex: 1; min-width: 0; }
+.action-card-tag   {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 7px;
+  border-radius: 8px;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+.priority-urgent      .action-card-tag { background: rgba(239,68,68,0.2);  color: #ef4444; }
+.priority-recommended .action-card-tag { background: rgba(245,158,11,0.2); color: #f59e0b; }
+.priority-info        .action-card-tag { background: rgba(99,102,241,0.2); color: var(--primary); }
+
+.action-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  line-height: 1.3;
+}
+
+.action-card-message {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+/* レスポンシブ */
+@media (max-width: 1200px) {
+  .rt-context-grid   { grid-template-columns: 1fr 1fr; }
+  .persona-layout    { grid-template-columns: 1fr; }
+  .persona-top-cards { flex-direction: row; flex-wrap: wrap; }
+  .persona-card      { flex: 1; min-width: 200px; }
+}
+
+@media (max-width: 900px) {
+  .rt-context-grid    { grid-template-columns: 1fr; }
+  .action-suggestions { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .persona-bar-label { width: 120px; }
+}

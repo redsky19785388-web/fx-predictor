@@ -245,6 +245,103 @@
         </div>
       </div>
 
+      <!-- ========================================================
+           リアルタイム・コンテキスト統合パネル
+           ======================================================== -->
+      <div class="rt-context-grid">
+
+        <!-- 交通機関の運行状況 -->
+        <div class="panel rt-panel">
+          <div class="panel-header">
+            <h2>🚃 交通機関リアルタイム状況</h2>
+            <span class="panel-subtitle rt-last-updated" id="rt-transit-updated">更新中...</span>
+          </div>
+          <div class="panel-body">
+            <div id="rt-transit-list" class="rt-transit-list">
+              <div class="empty-state"><p>取得中...</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 近隣施設の混雑状況 -->
+        <div class="panel rt-panel">
+          <div class="panel-header">
+            <h2>🏛️ 近隣施設の混雑状況</h2>
+            <span class="panel-subtitle">周辺エリアからの流入予測</span>
+          </div>
+          <div class="panel-body">
+            <div id="rt-nearby-list" class="rt-nearby-list">
+              <div class="empty-state"><p>取得中...</p></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SNSトレンドキーワード -->
+        <div class="panel rt-panel">
+          <div class="panel-header">
+            <h2>📱 SNSトレンドキーワード</h2>
+            <span class="panel-subtitle">上野エリア関連</span>
+          </div>
+          <div class="panel-body">
+            <div id="rt-sns-list" class="rt-sns-list">
+              <div class="empty-state"><p>取得中...</p></div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /rt-context-grid -->
+
+      <!-- ========================================================
+           動的ペルソナ推計パネル
+           ======================================================== -->
+      <div class="panel persona-panel">
+        <div class="panel-header">
+          <h2>👥 現在の来訪者属性推計（ペルソナ分析）</h2>
+          <span class="panel-subtitle">場所・時間・天気・交通状況から集団レベルで推計（個人トラッキングなし）</span>
+        </div>
+        <div class="panel-body">
+          <div class="persona-layout">
+
+            <!-- バー表示 -->
+            <div class="persona-bars-col">
+              <div id="persona-bars" class="persona-bars">
+                <div class="empty-state"><p>リアルタイムデータ取得中...</p></div>
+              </div>
+            </div>
+
+            <!-- 主要ペルソナ詳細カード -->
+            <div class="persona-cards-col">
+              <div id="persona-top-cards" class="persona-top-cards">
+                <!-- JS が描画 -->
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- ========================================================
+           ニーズ（嗜好）自動提案パネル
+           ======================================================== -->
+      <div class="panel action-panel">
+        <div class="panel-header">
+          <h2>💡 今すぐやるべきこと — アクション提案</h2>
+          <div class="action-panel-meta">
+            <span class="ai-badge">AI生成</span>
+            <span class="panel-subtitle" id="action-last-updated">リアルタイム更新</span>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div id="action-suggestions" class="action-suggestions">
+            <div class="empty-state">
+              <div class="empty-icon">💡</div>
+              <p>リアルタイムデータ取得中...</p>
+              <small>天気・交通・ペルソナを組み合わせた具体的な提案が表示されます</small>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- /tab-dashboard -->
 
     <!-- ============================
@@ -789,6 +886,9 @@
 <script src="js/floor-plan.js"></script>
 <script src="js/chart-manager.js"></script>
 <script src="js/alert-manager.js"></script>
+<script src="js/realtime-context.js"></script>
+<script src="js/persona-engine.js"></script>
+<script src="js/action-suggester.js"></script>
 <script src="js/app.js"></script>
 
 </body>

@@ -86,6 +86,10 @@ const App = (function () {
     // Ground Truth入力フォーム初期化
     _setupGroundTruthForm();
 
+    // リアルタイム・コンテキスト初期化（3分ごと自動更新）
+    realtimeContext.init(3 * 60 * 1000);
+    realtimeContext.onChange(() => _renderRealtimePanels());
+
     // ダッシュボード初期表示
     await _refreshDashboard();
 
@@ -279,6 +283,9 @@ const App = (function () {
 
     // 精度パネル更新
     _renderAccuracyPanel(_currentZoneId);
+
+    // リアルタイム・コンテキスト・ペルソナ・アクション提案パネルを更新
+    _renderRealtimePanels();
   }
 
   function _updateSummaryCards(currentData, zone) {
@@ -717,6 +724,210 @@ const App = (function () {
     await _refreshDashboard();
     document.getElementById('last-update-time').textContent =
       new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // -------- v3.0: リアルタイム・コンテキスト / ペルソナ / アクション提案 --------
+
+  /** 3つの新パネルをまとめて再描画する */
+  function _renderRealtimePanels() {
+    const ctx = realtimeContext.getData();
+    _renderTransitPanel(ctx.transit, ctx.lastUpdated);
+    _renderNearbyPanel(ctx.nearbyCrowding);
+    _renderSnsPanel(ctx.snsTrends);
+    _renderPersonaPanel(ctx);
+    _renderActionPanel(ctx);
+  }
+
+  /** 交通機関リストを描画 */
+  function _renderTransitPanel(transit, lastUpdated) {
+    const el = document.getElementById('rt-transit-list');
+    if (!el) return;
+
+    if (!transit || !transit.length) {
+      el.innerHTML = '<div class="empty-state"><p>データ取得中...</p></div>';
+      return;
+    }
+
+    el.innerHTML = transit.map(line => `
+      <div class="rt-transit-item">
+        <span class="rt-transit-icon">${line.icon}</span>
+        <span class="rt-transit-name">${line.name}</span>
+        <span class="rt-transit-status ${line.status}">${line.message}</span>
+      </div>
+    `).join('');
+
+    const updEl = document.getElementById('rt-transit-updated');
+    if (updEl && lastUpdated) {
+      updEl.textContent = `更新: ${new Date(lastUpdated).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+  }
+
+  /** 近隣施設混雑を描画 */
+  function _renderNearbyPanel(nearby) {
+    const el = document.getElementById('rt-nearby-list');
+    if (!el) return;
+
+    if (!nearby || !nearby.length) {
+      el.innerHTML = '<div class="empty-state"><p>データ取得中...</p></div>';
+      return;
+    }
+
+    el.innerHTML = nearby.map(f => {
+      const color = getCrowdingColor(f.level);
+      return `
+        <div class="rt-nearby-item">
+          <span class="rt-nearby-icon">${f.icon}</span>
+          <div class="rt-nearby-info">
+            <div class="rt-nearby-name">${f.name}</div>
+            <div class="rt-nearby-bar-wrap">
+              <div class="rt-nearby-bar" style="width:${f.level}%;background:${color}"></div>
+            </div>
+          </div>
+          <span class="rt-nearby-pct" style="color:${color}">${f.level}%</span>
+        </div>
+      `;
+    }).join('');
+  }
+
+  /** SNSトレンドを描画 */
+  function _renderSnsPanel(trends) {
+    const el = document.getElementById('rt-sns-list');
+    if (!el) return;
+
+    if (!trends || !trends.length) {
+      el.innerHTML = '<div class="empty-state"><p>データ取得中...</p></div>';
+      return;
+    }
+
+    el.innerHTML = trends.map(t => {
+      const arrowClass = t.delta >= 0 ? 'up' : 'down';
+      const arrowChar  = t.delta >= 0 ? '▲' : '▼';
+      return `
+        <span class="rt-sns-chip ${t.trending ? 'trending' : ''}">
+          ${t.keyword}
+          <span class="rt-sns-arrow ${arrowClass}">${arrowChar}${Math.abs(t.delta)}</span>
+        </span>
+      `;
+    }).join('');
+  }
+
+  /** ペルソナ推計パネルを描画 */
+  function _renderPersonaPanel(ctx) {
+    const barsEl  = document.getElementById('persona-bars');
+    const cardsEl = document.getElementById('persona-top-cards');
+    if (!barsEl || !cardsEl) return;
+
+    const now = new Date();
+    const hour = now.getHours();
+    const dow  = now.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const isHoliday = holidayClient.isLoaded() && holidayClient.isHoliday(
+      now.toISOString().split('T')[0]
+    );
+    const month = now.getMonth() + 1;
+
+    const worstDelay = realtimeContext.getWorstTransitDelay();
+    const weather = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+
+    const estimates = personaEngine.estimate({
+      zoneId: _currentZoneId,
+      hour,
+      isWeekend,
+      isHoliday,
+      weather,
+      transitDelayMin: worstDelay.delayMin,
+      month
+    });
+
+    // バー表示
+    barsEl.innerHTML = estimates.map(p => `
+      <div class="persona-bar-item">
+        <span class="persona-bar-icon">${p.icon}</span>
+        <span class="persona-bar-label" title="${p.label}">${p.short}</span>
+        <div class="persona-bar-track">
+          <div class="persona-bar-fill" style="width:${p.percentage}%;background:${p.color}"></div>
+        </div>
+        <span class="persona-bar-pct" style="color:${p.color}">${p.percentage}%</span>
+      </div>
+    `).join('');
+
+    // 上位3件カード
+    const top3 = personaEngine.getTop(estimates, 3);
+    cardsEl.innerHTML = top3.map((p, i) => `
+      <div class="persona-card rank-${i + 1}" style="border-left-color:${p.color}">
+        <div class="persona-card-header">
+          <span class="persona-card-icon">${p.icon}</span>
+          <span class="persona-card-label">${p.label}</span>
+          <span class="persona-card-pct" style="color:${p.color}">${p.percentage}%</span>
+        </div>
+        <div class="persona-card-desc">${p.desc}</div>
+      </div>
+    `).join('');
+
+    // アクション提案パネルも同時に更新（estimatesを共有）
+    _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month });
+  }
+
+  /** アクション提案パネルを描画（personaパネルから呼ばれる） */
+  function _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month }) {
+    const el = document.getElementById('action-suggestions');
+    if (!el) return;
+
+    const now = new Date();
+    const weather = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+
+    const suggestions = actionSuggester.generate({
+      personas:  estimates,
+      weather,
+      transit:   ctx.transit || [],
+      zoneId:    _currentZoneId,
+      hour,
+      isWeekend,
+      isHoliday,
+      month
+    });
+
+    el.innerHTML = suggestions.map(s => `
+      <div class="action-card priority-${s.priority}">
+        <div class="action-card-top">
+          <span class="action-card-icon">${s.icon}</span>
+          <div class="action-card-meta">
+            <span class="action-card-tag">${s.tag}</span>
+            <div class="action-card-title">${s.title}</div>
+          </div>
+        </div>
+        <div class="action-card-message">${s.message}</div>
+      </div>
+    `).join('');
+
+    const updEl = document.getElementById('action-last-updated');
+    if (updEl) {
+      updEl.textContent = `最終更新: ${now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+  }
+
+  /** アクション提案パネルのみを外部から呼ぶラッパー（realtimeContext変化時） */
+  function _renderActionPanel(ctx) {
+    // ペルソナ推計を取得してからアクション提案を更新
+    const now = new Date();
+    const hour = now.getHours();
+    const dow  = now.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    const isHoliday = holidayClient.isLoaded() && holidayClient.isHoliday(
+      now.toISOString().split('T')[0]
+    );
+    const month = now.getMonth() + 1;
+    const worstDelay = realtimeContext.getWorstTransitDelay();
+    const weather = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+
+    const estimates = personaEngine.estimate({
+      zoneId: _currentZoneId,
+      hour, isWeekend, isHoliday, weather,
+      transitDelayMin: worstDelay.delayMin,
+      month
+    });
+
+    _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month });
   }
 
   // -------- 1. AI予測精度パネル --------
