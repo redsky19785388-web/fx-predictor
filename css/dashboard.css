@@ -111,20 +111,60 @@ body {
   margin-bottom: 6px;
 }
 
+.facility-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .facility-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 10px;
+  padding: 7px 10px;
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s;
+  border: 1px solid transparent;
 }
-.facility-item:hover, .facility-item.active {
-  background: rgba(99, 102, 241, 0.15);
+.facility-item:hover {
+  background: rgba(99, 102, 241, 0.1);
 }
-.facility-icon { font-size: 16px; }
-.facility-name { font-size: 13px; font-weight: 500; }
+.facility-item.active {
+  background: rgba(99, 102, 241, 0.18);
+  border-color: rgba(99, 102, 241, 0.35);
+}
+.facility-icon { font-size: 15px; flex-shrink: 0; }
+.facility-name { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.facility-item.active .facility-name { color: var(--primary); font-weight: 600; }
+
+/* サイドバー データソース */
+.sidebar-datasources { border-top: 1px solid var(--border); padding-top: 10px; }
+.ds-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 4px;
+  font-size: 11px;
+}
+.ds-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  flex-shrink: 0;
+}
+.ds-dot.ok  { background: #10b981; }
+.ds-dot.err { background: #ef4444; }
+.ds-name { flex: 1; color: var(--text-dim); }
+.ds-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: rgba(148,163,184,0.1);
+  color: var(--text-dim);
+}
+.ds-badge.ok  { background: rgba(16,185,129,0.15); color: #10b981; }
+.ds-badge.err { background: rgba(239,68,68,0.15);  color: #ef4444; }
 
 .zone-item {
   display: flex;

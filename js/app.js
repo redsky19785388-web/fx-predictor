@@ -104,14 +104,26 @@ const App = (function () {
 
   // -------- サイドバー --------
 
+  const FACILITY_ICONS = {
+    ueno_park:  '🌳',
+    shinjuku:   '🏙️',
+    shibuya:    '🎌',
+    ikebukuro:  '🌟',
+    roppongi:   '🎭'
+  };
+
   function _buildSidebar() {
     const facilityList = document.getElementById('facility-list');
     if (facilityList) {
-      facilityList.innerHTML = `
-        <div class="facility-item active">
-          <span class="facility-icon">🌳</span>
-          <span class="facility-name">${_currentFacility.name}</span>
-        </div>`;
+      const allFacilities = CONFIG.allFacilities || [CONFIG.defaultFacility];
+      facilityList.innerHTML = allFacilities.map(fac => `
+        <div class="facility-item ${fac.id === _currentFacility.id ? 'active' : ''}"
+             data-facility-id="${fac.id}"
+             onclick="app.selectFacility('${fac.id}')">
+          <span class="facility-icon">${FACILITY_ICONS[fac.id] || '📍'}</span>
+          <span class="facility-name">${fac.name}</span>
+        </div>
+      `).join('');
     }
 
     const zoneList = document.getElementById('zone-list');
@@ -129,6 +141,66 @@ const App = (function () {
     document.querySelectorAll('.zone-item').forEach(el => {
       el.classList.toggle('active', el.dataset.zoneId === zoneId);
     });
+  }
+
+  function _updateFacilitySelection() {
+    document.querySelectorAll('.facility-item').forEach(el => {
+      el.classList.toggle('active', el.dataset.facilityId === _currentFacility.id);
+    });
+  }
+
+  // -------- 施設切り替え --------
+
+  async function _selectFacility(facilityId) {
+    const allFacilities = CONFIG.allFacilities || [CONFIG.defaultFacility];
+    const target = allFacilities.find(f => f.id === facilityId);
+    if (!target || target.id === _currentFacility.id) return;
+
+    _currentFacility   = target;
+    _currentZoneId     = target.zones[0]?.id || null;
+    _predictionResults = {};
+
+    // 天気クライアント座標を更新（実際の座標でOpen-Meteoからリアルデータ取得）
+    weatherClient.init(target.lat, target.lng);
+    _fetchWeather();
+
+    // リアルタイムコンテキストをエリア切替
+    realtimeContext.setArea(target.id);
+
+    // ヘッダー施設名更新
+    const nameEl = document.getElementById('current-facility-name');
+    if (nameEl) nameEl.textContent = target.name;
+
+    // フロアプランをリセット・再初期化
+    floorPlan.init('map-container', 'zone-tooltip', target.zones);
+    const mapCfg = CONFIG.facilityMapCenters[target.id];
+    if (mapCfg && floorPlan._map) {
+      floorPlan._map.setView(mapCfg.center, mapCfg.zoom);
+    }
+
+    // UI再構築
+    _buildSidebar();
+    _buildZoneSelects();
+    _updateDataSourceStatus();
+
+    // 履歴データがなければ自動生成
+    const existingRecords = dataManager.getRecords({ zoneId: target.zones[0]?.id, limit: 1 });
+    if (existingRecords.length === 0) {
+      _showToastAndGenerate(target);
+    }
+
+    await _refreshDashboard();
+  }
+
+  function _showToastAndGenerate(facility) {
+    showToast(`${facility.name}のデータを生成中...`, 'info');
+    setTimeout(() => {
+      const count = dummyGenerator.generate(
+        facility.id, 30, { includeWeather: true, includeHolidays: true }, facility.zones
+      );
+      showToast(`${facility.name}: ${count}件のデータを生成しました`, 'success');
+      _refreshDashboard();
+    }, 100);
   }
 
   // -------- ゾーン選択肢 --------
@@ -513,7 +585,7 @@ const App = (function () {
   function _setupDummyGenerator() {
     document.getElementById('btn-generate')?.addEventListener('click', () => {
       const period = parseInt(document.getElementById('dummy-period').value) || 30;
-      const facilityType = document.getElementById('dummy-facility-type').value || 'mall';
+      const facilityType = document.getElementById('dummy-facility-type').value || _currentFacility.id || 'ueno_park';
       const options = {
         includeEvents: document.getElementById('dummy-include-events').checked,
         includeWeather: document.getElementById('dummy-include-weather').checked,
@@ -1194,16 +1266,28 @@ const App = (function () {
   function _updateDataSourceStatus() {
     const weatherEl  = document.getElementById('ds-weather-status');
     const holidayEl  = document.getElementById('ds-holiday-status');
+    const weatherOk  = weatherClient.isDataAvailable();
+    const holidayOk  = holidayClient.isLoaded();
+
     if (weatherEl) {
-      const ok = weatherClient.isDataAvailable();
-      weatherEl.textContent  = ok ? '接続済み' : '待機中';
-      weatherEl.className    = `ac-ds-status ${ok ? 'active' : 'pending'}`;
+      weatherEl.textContent = weatherOk ? '接続済み' : '待機中';
+      weatherEl.className   = `ac-ds-status ${weatherOk ? 'active' : 'pending'}`;
     }
     if (holidayEl) {
-      const ok = holidayClient.isLoaded();
-      holidayEl.textContent  = ok ? '取得済み' : '待機中';
-      holidayEl.className    = `ac-ds-status ${ok ? 'active' : 'pending'}`;
+      holidayEl.textContent = holidayOk ? '取得済み' : '待機中';
+      holidayEl.className   = `ac-ds-status ${holidayOk ? 'active' : 'pending'}`;
     }
+
+    // サイドバーのリアルタイムデータソースドットも更新
+    const dotW = document.getElementById('ds-dot-weather');
+    const badW = document.getElementById('ds-badge-weather');
+    if (dotW)  dotW.className  = `ds-dot ${weatherOk ? 'ok' : ''}`;
+    if (badW) { badW.textContent = weatherOk ? `${_currentFacility.name}` : '待機中'; badW.className = `ds-badge ${weatherOk ? 'ok' : ''}`; }
+
+    const dotH = document.getElementById('ds-dot-holiday');
+    const badH = document.getElementById('ds-badge-holiday');
+    if (dotH)  dotH.className  = `ds-dot ${holidayOk ? 'ok' : ''}`;
+    if (badH) { badH.textContent = holidayOk ? '取得済み' : '待機中'; badH.className = `ds-badge ${holidayOk ? 'ok' : ''}`; }
   }
 
   // -------- 公開API --------
@@ -1217,6 +1301,7 @@ const App = (function () {
       _updateSidebarSelection(zoneId);
       _refreshDashboard();
     },
+    selectFacility: _selectFacility,
     openSettings,
     closeSettings,
     runPrediction: _runPrediction

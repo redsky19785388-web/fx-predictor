@@ -49,6 +49,21 @@
       <button id="btn-toggle-autocollect" class="sidebar-btn autocollect-btn">🌐 自動収集: OFF</button>
     </div>
 
+    <!-- リアルデータソース状態 -->
+    <div class="sidebar-section sidebar-datasources">
+      <div class="sidebar-label">リアルデータソース</div>
+      <div class="ds-item">
+        <span class="ds-dot" id="ds-dot-weather"></span>
+        <span class="ds-name">Open-Meteo 天気API</span>
+        <span class="ds-badge" id="ds-badge-weather">取得中</span>
+      </div>
+      <div class="ds-item">
+        <span class="ds-dot" id="ds-dot-holiday"></span>
+        <span class="ds-name">holidays-jp 祝日</span>
+        <span class="ds-badge" id="ds-badge-holiday">取得中</span>
+      </div>
+    </div>
+
     <div class="sidebar-footer">
       <div class="status-indicator">
         <div class="status-dot active"></div>
@@ -535,9 +550,11 @@
               <div class="form-group">
                 <label>施設タイプ</label>
                 <select id="dummy-facility-type" class="form-control">
-                  <option value="mall">ショッピングモール</option>
-                  <option value="supermarket">スーパーマーケット</option>
-                  <option value="station">駅構内商業施設</option>
+                  <option value="ueno_park">上野公園エリア</option>
+                  <option value="shinjuku">新宿エリア</option>
+                  <option value="shibuya">渋谷エリア</option>
+                  <option value="ikebukuro">池袋エリア</option>
+                  <option value="roppongi">六本木エリア</option>
                 </select>
               </div>
               <div class="dummy-options">

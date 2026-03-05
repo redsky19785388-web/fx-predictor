@@ -461,7 +461,12 @@ class PredictionEngine {
   }
 
   _findZone(zoneId) {
-    return CONFIG.defaultFacility.zones.find(z => z.id === zoneId) || null;
+    const allFacilities = CONFIG.allFacilities || [CONFIG.defaultFacility];
+    for (const fac of allFacilities) {
+      const zone = fac.zones.find(z => z.id === zoneId);
+      if (zone) return zone;
+    }
+    return null;
   }
 }
 

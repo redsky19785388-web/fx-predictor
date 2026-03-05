@@ -246,3 +246,324 @@ window.formatTime = formatTime;
 window.formatDate = formatDate;
 window.formatDateShort = formatDateShort;
 window.DAY_NAMES_JA = DAY_NAMES_JA;
+
+// ================================================================
+// 追加エリア施設定義
+// ================================================================
+
+const FACILITY_SHINJUKU = {
+  id: 'shinjuku',
+  name: '新宿エリア',
+  address: '東京都新宿区新宿',
+  lat: 35.6896,
+  lng: 139.6917,
+  timezone: 'Asia/Tokyo',
+  openHour: 0,
+  closeHour: 24,
+  zones: [
+    {
+      id: 'shinjuku_kabukicho',
+      name: '歌舞伎町・東口ナイトエリア',
+      shortName: '歌舞伎町',
+      type: 'entertainment',
+      isIndoor: false,
+      closedOnMonday: false,
+      capacity: 3000,
+      lat: 35.6938, lng: 139.7034,
+      color: '#ef4444',
+      mapRadius: 65
+    },
+    {
+      id: 'shinjuku_business',
+      name: '西口・高層ビジネス街',
+      shortName: '西口ビジネス',
+      type: 'office',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 2000,
+      lat: 35.6895, lng: 139.6866,
+      color: '#3b82f6',
+      mapRadius: 55
+    },
+    {
+      id: 'shinjuku_gyoen',
+      name: '新宿御苑',
+      shortName: '新宿御苑',
+      type: 'park',
+      isIndoor: false,
+      closedOnMonday: true,
+      capacity: 1500,
+      lat: 35.6852, lng: 139.7100,
+      color: '#10b981',
+      mapRadius: 60
+    },
+    {
+      id: 'shinjuku_isetan',
+      name: '新宿三丁目・伊勢丹周辺',
+      shortName: '新宿三丁目',
+      type: 'shopping',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 1000,
+      lat: 35.6920, lng: 139.7044,
+      color: '#ec4899',
+      mapRadius: 45
+    },
+    {
+      id: 'shinjuku_southgate',
+      name: '新宿南口・タカシマヤタイムズスクエア',
+      shortName: '新宿南口',
+      type: 'shopping',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 900,
+      lat: 35.6855, lng: 139.6997,
+      color: '#8b5cf6',
+      mapRadius: 40
+    }
+  ]
+};
+
+const FACILITY_SHIBUYA = {
+  id: 'shibuya',
+  name: '渋谷エリア',
+  address: '東京都渋谷区道玄坂',
+  lat: 35.6580,
+  lng: 139.7016,
+  timezone: 'Asia/Tokyo',
+  openHour: 6,
+  closeHour: 24,
+  zones: [
+    {
+      id: 'shibuya_scramble',
+      name: 'スクランブル交差点周辺',
+      shortName: 'スクランブル',
+      type: 'crossing',
+      isIndoor: false,
+      closedOnMonday: false,
+      capacity: 3000,
+      lat: 35.6595, lng: 139.7004,
+      color: '#f59e0b',
+      mapRadius: 55
+    },
+    {
+      id: 'shibuya_center',
+      name: 'センター街・渋谷109',
+      shortName: 'センター街',
+      type: 'shopping',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 1200,
+      lat: 35.6611, lng: 139.6993,
+      color: '#ec4899',
+      mapRadius: 45
+    },
+    {
+      id: 'shibuya_hikarie',
+      name: '渋谷ヒカリエ・東口',
+      shortName: 'ヒカリエ',
+      type: 'complex',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 1000,
+      lat: 35.6587, lng: 139.7034,
+      color: '#6366f1',
+      mapRadius: 40
+    },
+    {
+      id: 'shibuya_stream',
+      name: '渋谷ストリーム・南口',
+      shortName: '渋谷南口',
+      type: 'complex',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 700,
+      lat: 35.6560, lng: 139.7016,
+      color: '#06b6d4',
+      mapRadius: 38
+    },
+    {
+      id: 'shibuya_catstreet',
+      name: 'キャットストリート・神南エリア',
+      shortName: 'キャットSt',
+      type: 'park',
+      isIndoor: false,
+      closedOnMonday: false,
+      capacity: 400,
+      lat: 35.6638, lng: 139.7063,
+      color: '#10b981',
+      mapRadius: 35
+    }
+  ]
+};
+
+const FACILITY_IKEBUKURO = {
+  id: 'ikebukuro',
+  name: '池袋エリア',
+  address: '東京都豊島区東池袋',
+  lat: 35.7295,
+  lng: 139.7110,
+  timezone: 'Asia/Tokyo',
+  openHour: 7,
+  closeHour: 23,
+  zones: [
+    {
+      id: 'ikebukuro_sunshine',
+      name: 'サンシャインシティ・東口',
+      shortName: 'サンシャイン',
+      type: 'complex',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 2000,
+      lat: 35.7293, lng: 139.7187,
+      color: '#f59e0b',
+      mapRadius: 60
+    },
+    {
+      id: 'ikebukuro_dept',
+      name: '西武・東武デパート街',
+      shortName: 'デパート街',
+      type: 'shopping',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 1500,
+      lat: 35.7295, lng: 139.7105,
+      color: '#3b82f6',
+      mapRadius: 50
+    },
+    {
+      id: 'ikebukuro_otome',
+      name: '乙女ロード・アニメイト',
+      shortName: '乙女ロード',
+      type: 'specialty',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 500,
+      lat: 35.7325, lng: 139.7155,
+      color: '#ec4899',
+      mapRadius: 35
+    },
+    {
+      id: 'ikebukuro_westpark',
+      name: '池袋西口公園・東京芸術劇場',
+      shortName: '西口公園',
+      type: 'park',
+      isIndoor: false,
+      closedOnMonday: false,
+      capacity: 600,
+      lat: 35.7307, lng: 139.7079,
+      color: '#10b981',
+      mapRadius: 40
+    },
+    {
+      id: 'ikebukuro_east',
+      name: '池袋東口・グリーン大通り',
+      shortName: '東口グリーン',
+      type: 'entertainment',
+      isIndoor: false,
+      closedOnMonday: false,
+      capacity: 800,
+      lat: 35.7288, lng: 139.7142,
+      color: '#8b5cf6',
+      mapRadius: 42
+    }
+  ]
+};
+
+const FACILITY_ROPPONGI = {
+  id: 'roppongi',
+  name: '六本木エリア',
+  address: '東京都港区六本木',
+  lat: 35.6628,
+  lng: 139.7314,
+  timezone: 'Asia/Tokyo',
+  openHour: 0,
+  closeHour: 24,
+  zones: [
+    {
+      id: 'roppongi_hills',
+      name: '六本木ヒルズ・アリーナ',
+      shortName: 'ヒルズ',
+      type: 'complex',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 1500,
+      lat: 35.6604, lng: 139.7292,
+      color: '#6366f1',
+      mapRadius: 55
+    },
+    {
+      id: 'roppongi_midtown',
+      name: '東京ミッドタウン',
+      shortName: 'ミッドタウン',
+      type: 'complex',
+      isIndoor: true,
+      closedOnMonday: false,
+      capacity: 1200,
+      lat: 35.6657, lng: 139.7310,
+      color: '#3b82f6',
+      mapRadius: 48
+    },
+    {
+      id: 'roppongi_nact',
+      name: '国立新美術館',
+      shortName: '新美術館',
+      type: 'museum',
+      isIndoor: true,
+      closedOnMonday: false,
+      closedOnTuesday: true,
+      capacity: 800,
+      lat: 35.6652, lng: 139.7271,
+      color: '#10b981',
+      mapRadius: 42
+    },
+    {
+      id: 'roppongi_crossing',
+      name: '六本木交差点・ナイトライフ',
+      shortName: '六本木交差点',
+      type: 'entertainment',
+      isIndoor: false,
+      closedOnMonday: false,
+      capacity: 2000,
+      lat: 35.6627, lng: 139.7315,
+      color: '#ef4444',
+      mapRadius: 50
+    },
+    {
+      id: 'roppongi_keyakizaka',
+      name: 'けやき坂・ヒルズアレー',
+      shortName: 'けやき坂',
+      type: 'park',
+      isIndoor: false,
+      closedOnMonday: false,
+      capacity: 500,
+      lat: 35.6594, lng: 139.7315,
+      color: '#f59e0b',
+      mapRadius: 38
+    }
+  ]
+};
+
+// 全施設リスト（施設切り替えで参照）
+CONFIG.allFacilities = [
+  { ...CONFIG.defaultFacility },
+  FACILITY_SHINJUKU,
+  FACILITY_SHIBUYA,
+  FACILITY_IKEBUKURO,
+  FACILITY_ROPPONGI
+];
+
+// 施設別 地図中心座標
+CONFIG.facilityMapCenters = {
+  ueno_park:  { center: [35.7130, 139.7730], zoom: 16 },
+  shinjuku:   { center: [35.6896, 139.6917], zoom: 15 },
+  shibuya:    { center: [35.6585, 139.7016], zoom: 15 },
+  ikebukuro:  { center: [35.7295, 139.7110], zoom: 15 },
+  roppongi:   { center: [35.6628, 139.7314], zoom: 15 }
+};
+
+window.FACILITY_SHINJUKU  = FACILITY_SHINJUKU;
+window.FACILITY_SHIBUYA   = FACILITY_SHIBUYA;
+window.FACILITY_IKEBUKURO = FACILITY_IKEBUKURO;
+window.FACILITY_ROPPONGI  = FACILITY_ROPPONGI;
+
