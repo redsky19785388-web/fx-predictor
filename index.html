@@ -62,6 +62,11 @@
         <span class="ds-name">holidays-jp 祝日</span>
         <span class="ds-badge" id="ds-badge-holiday">取得中</span>
       </div>
+      <div class="ds-item" title="Open-Meteo Air Quality API (花粉・PM2.5)">
+        <span class="ds-dot" id="ds-dot-airquality"></span>
+        <span class="ds-name">🌿 大気質・花粉API</span>
+        <span class="ds-badge" id="ds-badge-airquality">取得中</span>
+      </div>
     </div>
 
     <div class="sidebar-footer">
@@ -897,6 +902,8 @@
 <script src="js/dummy-generator.js"></script>
 <script src="js/weather-client.js"></script>
 <script src="js/holiday-client.js"></script>
+<script src="js/air-quality-client.js"></script>
+<script src="js/school-calendar.js"></script>
 <script src="js/auto-collector.js"></script>
 <script src="js/event-manager.js"></script>
 <script src="js/prediction-engine.js"></script>
@@ -907,6 +914,17 @@
 <script src="js/persona-engine.js"></script>
 <script src="js/action-suggester.js"></script>
 <script src="js/app.js"></script>
+
+<script>
+// アクションカードの詳細ボタン（ℹ️）クリックで詳細行をトグル
+document.addEventListener('click', function(e) {
+  if (e.target.classList.contains('action-detail-btn')) {
+    const card   = e.target.closest('.action-card');
+    const detail = card?.querySelector('.action-detail-row');
+    if (detail) detail.classList.toggle('hidden');
+  }
+});
+</script>
 
 </body>
 </html>

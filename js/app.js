@@ -69,12 +69,19 @@ const App = (function () {
       if (alerts.length > 0) alertManager.showBanner(alerts[0]);
     });
 
-    // 天気取得
+    // 天気取得（日没データを含む）
     _fetchWeather();
 
     // 祝日データ取得
     holidayClient.fetchHolidays().then(() => {
       _updateDataSourceStatus();
+    });
+
+    // 大気質・花粉データ取得（AirQualityClient）
+    airQualityClient.init(_currentFacility.lat, _currentFacility.lng);
+    airQualityClient.fetchAirQuality().then(() => {
+      _updateDataSourceStatus();
+      console.log('[App] 大気質データ取得完了');
     });
 
     // 自動収集UI初期化
@@ -903,8 +910,9 @@ const App = (function () {
     );
     const month = now.getMonth() + 1;
 
-    const worstDelay = realtimeContext.getWorstTransitDelay();
-    const weather = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+    const worstDelay    = realtimeContext.getWorstTransitDelay();
+    const weather       = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+    const schoolVacInfo = window.schoolCalendar?.check(now) ?? { isVacation: false, vacation: null };
 
     const estimates = personaEngine.estimate({
       zoneId: _currentZoneId,
@@ -913,7 +921,8 @@ const App = (function () {
       isHoliday,
       weather,
       transitDelayMin: worstDelay.delayMin,
-      month
+      month,
+      schoolVacation: schoolVacInfo
     });
 
     // バー表示
@@ -942,40 +951,55 @@ const App = (function () {
     `).join('');
 
     // アクション提案パネルも同時に更新（estimatesを共有）
-    _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month });
+    _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month, schoolVacInfo });
   }
 
   /** アクション提案パネルを描画（personaパネルから呼ばれる） */
-  function _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month }) {
+  function _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month, schoolVacInfo }) {
     const el = document.getElementById('action-suggestions');
     if (!el) return;
 
-    const now = new Date();
-    const weather = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+    const now        = new Date();
+    const weather    = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+    const aqData     = airQualityClient.isDataAvailable()
+      ? airQualityClient.getForDateTime(now)
+      : null;
+    const sunsetTs   = weatherClient.getSunsetForDate?.(now) ?? null;
+    const schoolVac  = schoolVacInfo ?? window.schoolCalendar?.check(now) ?? null;
 
     const suggestions = actionSuggester.generate({
-      personas:  estimates,
+      personas:       estimates,
       weather,
-      transit:   ctx.transit || [],
-      zoneId:    _currentZoneId,
+      transit:        ctx.transit || [],
+      zoneId:         _currentZoneId,
       hour,
       isWeekend,
       isHoliday,
-      month
+      month,
+      airQuality:     aqData,
+      schoolVacation: schoolVac,
+      sunsetTs
     });
 
-    el.innerHTML = suggestions.map(s => `
-      <div class="action-card priority-${s.priority}">
+    el.innerHTML = suggestions.map(s => {
+      // detail フィールドがある場合はツールチップとして隠す
+      const detailAttr = s.detail
+        ? `data-detail="${s.detail.replace(/"/g, '&quot;')}" title="${s.detail.replace(/"/g, '&quot;')}"`
+        : '';
+      return `
+      <div class="action-card priority-${s.priority}" ${detailAttr}>
         <div class="action-card-top">
           <span class="action-card-icon">${s.icon}</span>
           <div class="action-card-meta">
             <span class="action-card-tag">${s.tag}</span>
             <div class="action-card-title">${s.title}</div>
           </div>
+          ${s.detail ? '<span class="action-detail-btn" title="詳細データを表示">ℹ️</span>' : ''}
         </div>
         <div class="action-card-message">${s.message}</div>
+        ${s.detail ? `<div class="action-detail-row hidden">${s.detail}</div>` : ''}
       </div>
-    `).join('');
+    `}).join('');
 
     const updEl = document.getElementById('action-last-updated');
     if (updEl) {
@@ -985,7 +1009,6 @@ const App = (function () {
 
   /** アクション提案パネルのみを外部から呼ぶラッパー（realtimeContext変化時） */
   function _renderActionPanel(ctx) {
-    // ペルソナ推計を取得してからアクション提案を更新
     const now = new Date();
     const hour = now.getHours();
     const dow  = now.getDay();
@@ -993,18 +1016,19 @@ const App = (function () {
     const isHoliday = holidayClient.isLoaded() && holidayClient.isHoliday(
       now.toISOString().split('T')[0]
     );
-    const month = now.getMonth() + 1;
-    const worstDelay = realtimeContext.getWorstTransitDelay();
-    const weather = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+    const month          = now.getMonth() + 1;
+    const worstDelay     = realtimeContext.getWorstTransitDelay();
+    const weather        = weatherClient.getForecastForDateTime ? weatherClient.getForecastForDateTime(now) : null;
+    const schoolVacInfo  = window.schoolCalendar?.check(now) ?? { isVacation: false, vacation: null };
 
     const estimates = personaEngine.estimate({
       zoneId: _currentZoneId,
       hour, isWeekend, isHoliday, weather,
       transitDelayMin: worstDelay.delayMin,
-      month
+      month, schoolVacation: schoolVacInfo
     });
 
-    _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month });
+    _renderActionSuggestions(estimates, ctx, { hour, isWeekend, isHoliday, month, schoolVacInfo });
   }
 
   // -------- 1. AI予測精度パネル --------
@@ -1293,6 +1317,13 @@ const App = (function () {
     const badH = document.getElementById('ds-badge-holiday');
     if (dotH)  dotH.className  = `ds-dot ${holidayOk ? 'ok' : ''}`;
     if (badH) { badH.textContent = holidayOk ? '取得済み' : '待機中'; badH.className = `ds-badge ${holidayOk ? 'ok' : ''}`; }
+
+    // 大気質・花粉データソース
+    const aqOk    = airQualityClient.isDataAvailable();
+    const dotAq   = document.getElementById('ds-dot-airquality');
+    const badAq   = document.getElementById('ds-badge-airquality');
+    if (dotAq)  dotAq.className  = `ds-dot ${aqOk ? 'ok' : ''}`;
+    if (badAq) { badAq.textContent = aqOk ? '取得済み' : '待機中'; badAq.className = `ds-badge ${aqOk ? 'ok' : ''}`; }
   }
 
   // -------- 公開API --------

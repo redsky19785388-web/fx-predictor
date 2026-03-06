@@ -19,17 +19,19 @@ const ActionSuggester = (function () {
    * @param {number} params.month      - 月（1-12）
    * @returns {Array<{priority, icon, title, message, tag}>}
    */
-  function generate({ personas, weather, transit, zoneId, hour, isWeekend, isHoliday, month }) {
+  function generate({ personas, weather, transit, zoneId, hour, isWeekend, isHoliday, month,
+                       airQuality, schoolVacation, sunsetTs }) {
     const suggestions = [];
     const top1 = personas[0] || null;
     const top2 = personas[1] || null;
 
     // 天気条件
-    const temp   = weather ? weather.temp : null;
-    const rain   = weather && weather.precipitationProbability > 50;
-    const cold   = temp !== null && temp < 10;
+    const temp     = weather ? weather.temp : null;
+    const rain     = weather && weather.precipitationProbability > 50;
+    const cold     = temp !== null && temp < 10;
     const coldSnap = temp !== null && temp < 5;
-    const hot    = temp !== null && temp > 32;
+    const hot      = temp !== null && temp > 32;
+    const isClear  = weather && (weather.category === 'clear');
 
     // 交通遅延
     const worstDelay   = transit && transit.length
@@ -218,6 +220,106 @@ const ActionSuggester = (function () {
           `フォトスポットの案内をSNSでも発信し、来店動機を高めてください。` +
           `「#上野桜」タグでの投稿を促すPOPも有効です。`
       });
+    }
+
+    // ================================================================
+    // v3.0 新ルール群
+    // ================================================================
+
+    // --- R13: 花粉高 + 晴れ + 屋内ゾーン（シナリオ1） ---
+    if (airQuality && isClear) {
+      const { pollenLevel, pm25Level } = AirQualityClient.getCompositeLevel(airQuality);
+      const isBadAir = pollenLevel === 'high' || pollenLevel === 'very_high' ||
+                       pm25Level === 'unhealthy' || pm25Level === 'hazardous';
+      if (isBadAir) {
+        const pollenIcons   = { none:'😊', low:'🌿', moderate:'😶', high:'😷', very_high:'🚫' };
+        const pollenDisplay = `${pollenIcons[pollenLevel] || '😷'} 花粉: ${pollenLevel.replace('_',' ')} / PM2.5: ${pm25Level}`;
+        suggestions.push({
+          priority: 'urgent',
+          icon: '🌿',
+          tag: '花粉・大気質',
+          title: '花粉が多いため、屋内カフェへの集客が急増中',
+          message: `現在の大気質: ${pollenDisplay}。晴れているため花粉が飛散しやすく、` +
+            `屋外エリアを避けて屋内施設に人が集中する傾向があります。` +
+            `テイクアウトではなく店内飲食の準備を優先し、` +
+            `「花粉対策の安心空間」として空気清浄機稼働・マスク置きの設置を推奨します。`,
+          detail: `[花粉詳細] シラカバ: ${Math.round(airQuality.birch)}g/m³ / ` +
+            `ハンノキ: ${Math.round(airQuality.alder)}g/m³ / ` +
+            `PM2.5: ${Math.round(airQuality.pm25)}μg/m³`
+        });
+      }
+    }
+
+    // --- R14: 屋外ゾーン + 花粉高（観光客が屋外回避） ---
+    if (airQuality && isClear) {
+      const { pollenLevel } = AirQualityClient.getCompositeLevel(airQuality);
+      if ((pollenLevel === 'high' || pollenLevel === 'very_high') &&
+          (top1?.id === 'inbound_tourist' || top1?.id === 'domestic_tourist')) {
+        suggestions.push({
+          priority: 'recommended',
+          icon: '😷',
+          tag: '花粉対策',
+          title: '観光客の花粉対策ニーズが高い',
+          message: `花粉飛散量が多く、観光客（${top1.label}）が屋外散策を控える傾向があります。` +
+            `マスク・ティッシュのサービスや「屋内で楽しめるコース提案」で来店動機を高めてください。` +
+            `インバウンド向けに英語で "High pollen today – enjoy our indoor space!" の掲示も有効です。`,
+          detail: `花粉レベル: ${pollenLevel}`
+        });
+      }
+    }
+
+    // --- R15: 学校長期休み + 平日（シナリオ2） ---
+    if (schoolVacation?.isVacation && isWorkday) {
+      const vac = schoolVacation.vacation;
+      const { studentBoost, familyBoost } = window.schoolCalendar.getPersonaBoost(vac.id);
+      suggestions.push({
+        priority: 'recommended',
+        icon: vac.icon,
+        tag: vac.label,
+        title: `${vac.label}期間中：平日でも休日並みの来客が見込まれます`,
+        message: `${vac.label}のため、今日は学生・ファミリー層の来訪が通常の平日比で` +
+          `最大${Math.round(studentBoost * 100 - 100)}%増加する見込みです。` +
+          `平日スタッフ体制のままでは対応しきれない可能性があります。` +
+          `学割メニューやお子様向けサービスを前面に出し、週末並みの準備をしてください。`,
+        detail: `[学校休み詳細] ${vac.label} / 学生ブースト×${studentBoost.toFixed(1)} / ファミリーブースト×${familyBoost.toFixed(1)}`
+      });
+    }
+
+    // --- R16: 日没前後30分（シナリオ3） ---
+    if (sunsetTs) {
+      const now        = Date.now();
+      const diffMs     = now - sunsetTs;
+      const inWindow   = Math.abs(diffMs) <= 30 * 60 * 1000;
+      const isAfter    = diffMs > 0;
+      if (inWindow) {
+        const sunsetStr = new Date(sunsetTs).toLocaleTimeString('ja-JP',
+          { hour: '2-digit', minute: '2-digit' });
+        if (isAfter) {
+          suggestions.push({
+            priority: 'recommended',
+            icon: '🌇',
+            tag: '日没シフト',
+            title: `日没（${sunsetStr}）後：ディナー需要へシフト中`,
+            message: `日没を境に屋外エリアから人が離れ、カフェ・飲食系への流入が急増しています。` +
+              `ランチメニューからディナーメニューへの切り替え・照明演出の変更・` +
+              `テーブルセッティングの見直しを今すぐ実施してください。` +
+              `「日没後の特別ドリンク」のアナウンスで客単価アップを狙えます。`,
+            detail: `日没時刻: ${sunsetStr}`
+          });
+        } else {
+          const minLeft = Math.round(Math.abs(diffMs) / 60000);
+          suggestions.push({
+            priority: 'info',
+            icon: '🌆',
+            tag: '夕方対策',
+            title: `日没まで${minLeft}分：夕方シフトの準備を`,
+            message: `あと${minLeft}分で日没（${sunsetStr}）を迎えます。` +
+              `屋外エリアから屋内への人流シフトが始まります。` +
+              `ディナーセッティング・照明切り替え・夕食メニューの準備を今から進めてください。`,
+            detail: `日没時刻: ${sunsetStr}`
+          });
+        }
+      }
     }
 
     // --- フォールバック: 提案なし ---

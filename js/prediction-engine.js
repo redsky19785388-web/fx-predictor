@@ -1,17 +1,16 @@
 /**
- * prediction-engine.js - 上野公園特化 多変数混雑予測エンジン v2.1
+ * prediction-engine.js - 上野公園特化 多変数混雑予測エンジン v3.0
  *
  * 予測式:
  *   predicted = base_historical × weather_modifier × event_modifier
  *             × day_type_modifier × cherry_blossom_modifier × monday_museum_modifier
  *             × seasonal_modifier × bias_correction × transit_delay_modifier
+ *             × air_quality_modifier × school_vacation_modifier × sunset_shift_modifier
  *
- * 上野特有のモディファイア:
- *   - cherry_blossom_modifier  : 桜シーズン（3月下旬〜4月）の爆発的増加
- *   - monday_museum_modifier   : 月曜の美術館・博物館休館による人流変化
- *   - seasonal_modifier        : 上野公園の季節パターン（蓮、紅葉、年末等）
- *   - transit_delay_modifier   : 交通遅延・運転見合わせ時の屋内避難混雑上方修正
- *                                (cafe/market/屋内施設に +20〜40%)
+ * 追加モディファイア（v3.0）:
+ *   - air_quality_modifier    : [シナリオ1] 晴れ+高花粉→屋外↓ / 屋内カフェ・美術館↑+38%
+ *   - school_vacation_modifier: [シナリオ2] 平日+学校休み→動物園・公園・市場を休日水準まで↑
+ *   - sunset_shift_modifier   : [シナリオ3] 日没前後30分→屋外↓ / 居酒屋・夕食系カフェ↑+40%
  */
 
 class PredictionEngine {
@@ -126,6 +125,18 @@ class PredictionEngine {
     // ⑨ 交通遅延による屋内避難モディファイア（RealtimeContext連携）
     const transitDelayMod = this._getTransitDelayModifier(zone);
 
+    // ⑩ 大気質（花粉・PM2.5）モディファイア [シナリオ1]
+    const aqResult    = this._getAirQualityModifier(zone, weather);
+    const airQualMod  = aqResult.modifier;
+
+    // ⑪ 学校長期休みモディファイア [シナリオ2]
+    const schoolResult   = this._getSchoolVacationModifier(zone, targetDate, dayTypeMod);
+    const schoolVacMod   = schoolResult.modifier;
+
+    // ⑫ 日没シフトモディファイア [シナリオ3]
+    const sunsetResult = this._getSunsetShiftModifier(zone, targetTs);
+    const sunsetMod    = sunsetResult.modifier;
+
     // 合成
     let predicted = base
       * weatherMod
@@ -135,7 +146,10 @@ class PredictionEngine {
       * mondayMuseumMod
       * seasonalMod
       * biasFactor
-      * transitDelayMod;
+      * transitDelayMod
+      * airQualMod
+      * schoolVacMod
+      * sunsetMod;
     predicted = Math.max(1, Math.min(100, Math.round(predicted)));
 
     return this._makePrediction(zone.id, targetTs, predicted, confidence, {
@@ -149,6 +163,12 @@ class PredictionEngine {
       biasFactor:        parseFloat(biasFactor.toFixed(3)),
       transitDelayMod:   parseFloat(transitDelayMod.toFixed(2)),
       transitStatus:     window.realtimeContext?.getDelayImpactLevel() ?? 'none',
+      airQualMod:        parseFloat(airQualMod.toFixed(2)),
+      airQualScenario:   aqResult.scenario,
+      schoolVacMod:      parseFloat(schoolVacMod.toFixed(2)),
+      schoolVacInfo:     schoolResult.vacationInfo,
+      sunsetMod:         parseFloat(sunsetMod.toFixed(2)),
+      sunsetScenario:    sunsetResult.scenario,
       weatherInfo:       weather,
       events:            nearbyEvents.map(e => ({ name: e.name, impact: e.impact }))
     });
@@ -294,6 +314,97 @@ class PredictionEngine {
     return 1.0;
   }
 
+  // ----------------------------------------------------------------
+  // 新モディファイア ⑩⑪⑫ （v3.0追加）
+  // ----------------------------------------------------------------
+
+  /**
+   * ⑩ 大気質（花粉・PM2.5）モディファイア [シナリオ1]
+   *
+   * 「晴れ」かつ「花粉/PM2.5が多い」場合:
+   *   - 屋外ゾーン（公園・神社・レジャー）: 来客減少（-25〜-32%）
+   *   - 屋内ゾーン（カフェ・美術館・市場）: 花粉回避者が集中（+15〜+38%）
+   *
+   * AirQualityClient が未初期化の場合は 1.0 を返す
+   */
+  _getAirQualityModifier(zone, weather) {
+    if (!window.airQualityClient?.isDataAvailable()) {
+      return { modifier: 1.0, scenario: null };
+    }
+    const aqData = window.airQualityClient.getForDateTime(Date.now());
+    return AirQualityClient.getAirQualityModifier(zone, aqData, weather?.category ?? 'cloudy');
+  }
+
+  /**
+   * ⑪ 学校長期休みモディファイア [シナリオ2]
+   *
+   * 平日 + 学校長期休み期間中の場合:
+   *   - 動物園カフェ・公園・市場・余暇ゾーン: 平日でも休日水準まで引き上げ
+   *   - 美術館: 体験学習需要で若干上昇
+   *
+   * SchoolCalendar が未定義の場合は 1.0 を返す
+   *
+   * @returns {{ modifier: number, vacationInfo: Object|null }}
+   */
+  _getSchoolVacationModifier(zone, targetDate, dayTypeMod) {
+    if (!window.schoolCalendar) return { modifier: 1.0, vacationInfo: null };
+
+    const { isVacation, vacation } = window.schoolCalendar.check(targetDate);
+    if (!isVacation) return { modifier: 1.0, vacationInfo: null };
+
+    const dow       = targetDate.getDay();
+    const isWeekday = dow >= 1 && dow <= 5;
+
+    // 祝日・週末は既存モディファイアで対応済み
+    if (!isWeekday) return { modifier: 1.0, vacationInfo: vacation };
+
+    const mod = window.schoolCalendar.getVacationModifier(zone, true, vacation.id);
+    return { modifier: mod, vacationInfo: vacation };
+  }
+
+  /**
+   * ⑫ 日没シフトモディファイア [シナリオ3]
+   *
+   * 日没前後30分をトリガーとして夕方の人流シフトを表現:
+   *   - 屋外（公園・神社・レジャー）: 帰宅モード → 混雑急減（-40%）
+   *   - 屋内カフェ・市場（居酒屋・ディナー系）: ディナー需要急増（+40%）
+   *   - 美術館: 閉館直前の混雑（+15%）
+   *
+   * weatherClient.isNearSunset() を利用
+   *
+   * @returns {{ modifier: number, scenario: string|null }}
+   */
+  _getSunsetShiftModifier(zone, targetTs) {
+    if (!window.weatherClient?.getSunsetForDate) return { modifier: 1.0, scenario: null };
+
+    const { isNearSunset, minutesFromSunset } =
+      window.weatherClient.isNearSunset(targetTs, 30 * 60 * 1000);
+
+    if (!isNearSunset) return { modifier: 1.0, scenario: null };
+
+    const isAfterSunset = minutesFromSunset > 0;
+
+    if (!zone.isIndoor) {
+      // 屋外: 日没後は急減、直前でも減少開始
+      const cut = isAfterSunset ? 0.55 : 0.80;
+      return { modifier: cut, scenario: 'sunset_outdoor_departure' };
+    }
+
+    switch (zone.type) {
+      case 'cafe':
+        // カフェ: ディナー客・夕食後の滞留が急増
+        return { modifier: isAfterSunset ? 1.40 : 1.20, scenario: 'sunset_dinner_rush' };
+      case 'market':
+        // アメ横など: 夕方の買い物客増加
+        return { modifier: isAfterSunset ? 1.35 : 1.15, scenario: 'sunset_evening_market' };
+      case 'museum':
+        // 美術館: 閉館直前の駆け込み or 夜間開館
+        return { modifier: isAfterSunset ? 0.80 : 1.15, scenario: 'sunset_museum_closing' };
+      default:
+        return { modifier: 1.0, scenario: null };
+    }
+  }
+
   /**
    * ⑦ 上野公園季節モディファイア
    * - ぼたん祭り（4/10〜5/6）: shrine 1.6x
@@ -359,6 +470,12 @@ class PredictionEngine {
     recommendations.push(...this._detectWeatherImpacts(predictions, zone));
     // 桜シーズン特報
     recommendations.push(...this._detectCherryBlossomAlert(predictions, zone));
+    // 花粉・大気質アラート
+    recommendations.push(...this._detectAirQualityAlert(predictions, zone));
+    // 学校長期休みアラート
+    recommendations.push(...this._detectSchoolVacationAlert(predictions, zone));
+    // 日没シフトアラート
+    recommendations.push(...this._detectSunsetShiftAlert(predictions, zone));
 
     return recommendations
       .filter((r, i, arr) => arr.findIndex(x => x.time === r.time && x.type === r.type) === i)
@@ -378,6 +495,17 @@ class PredictionEngine {
       const label = f.transitStatus === 'suspended' ? '🚨 運転見合わせ' : '🚃 交通遅延';
       parts.push(`${label}による屋内避難流入で+${pct}%上方修正済み。`);
     }
+    if (f.airQualMod > 1.1) {
+      const pct = Math.round((f.airQualMod - 1) * 100);
+      parts.push(`🌿 花粉・PM2.5が多く屋内への集中で+${pct}%。`);
+    }
+    if (f.schoolVacMod > 1.1 && f.schoolVacInfo) {
+      const pct = Math.round((f.schoolVacMod - 1) * 100);
+      parts.push(`🎒 ${f.schoolVacInfo.label}のため平日でも休日並みに+${pct}%。`);
+    }
+    if (f.sunsetMod > 1.1) {
+      parts.push(`🌇 日没前後のディナー需要シフトで+${Math.round((f.sunsetMod - 1) * 100)}%。`);
+    }
     return parts.join('');
   }
 
@@ -387,6 +515,8 @@ class PredictionEngine {
     const parts = [`${zone.name}で${hour}時台に閑散（予測: ${pred.predictedLevel}%）が見込まれます。`];
     if (f.mondayMuseumMod < 0.5) parts.push(`月曜休館により周辺人流が大幅減少。`);
     if (f.weatherMod < 0.8) parts.push(`悪天候による来客減少が主因です。`);
+    if (f.airQualMod < 0.9) parts.push(`🌿 花粉・大気汚染で屋外への来訪が減少。`);
+    if (f.sunsetMod < 0.7) parts.push(`🌃 日没後の帰宅モードで屋外から人が離散。`);
     return parts.join('');
   }
 
@@ -485,6 +615,82 @@ class PredictionEngine {
         ? '臨時メニューの準備・テイクアウト体制強化・スタッフ3名以上の増員を推奨します。桜ライトアップ期間の夜間営業延長も検討してください。'
         : '仮設トイレ・ゴミ箱の増設、警備員の増員、飲食物の持ち込みルール周知を推奨します。',
       factors: peakPred.factors
+    }];
+  }
+
+  /** 花粉・PM2.5アラート */
+  _detectAirQualityAlert(predictions, zone) {
+    const triggered = predictions.find(p =>
+      p.factors?.airQualScenario === 'pollen_indoor_refuge' ||
+      p.factors?.airQualScenario === 'pollen_outdoor_avoidance'
+    );
+    if (!triggered) return [];
+    const isIndoor = zone.isIndoor;
+    const pct = isIndoor
+      ? `+${Math.round((triggered.factors.airQualMod - 1) * 100)}%`
+      : `-${Math.round((1 - triggered.factors.airQualMod) * 100)}%`;
+    return [{
+      type:     'air_quality',
+      severity: 'warning',
+      time:     triggered.targetTs,
+      zone:     zone.name,
+      message:  `🌿 花粉・PM2.5が多く、${zone.name}の来客が${pct}推計。${isIndoor ? '屋内カフェへの回避集中が発生中。' : '屋外エリアを避ける傾向が強まっています。'}`,
+      action:   isIndoor
+        ? '花粉対策グッズ（マスク・花粉除去スプレー）を店頭でPRし、「花粉のがれ特典」としてドリンク割引を実施することを推奨します。テイクアウトより店内滞在を促す施策が有効です。'
+        : '屋外エリアでは花粉・PM2.5情報を案内板で掲示し、近隣の屋内施設への誘導サインを強化してください。',
+      factors: triggered.factors
+    }];
+  }
+
+  /** 学校長期休みアラート */
+  _detectSchoolVacationAlert(predictions, zone) {
+    const triggered = predictions.find(p =>
+      p.factors?.schoolVacMod > 1.1 && p.factors?.schoolVacInfo
+    );
+    if (!triggered) return [];
+    const vac = triggered.factors.schoolVacInfo;
+    const pct = Math.round((triggered.factors.schoolVacMod - 1) * 100);
+    return [{
+      type:     'school_vacation',
+      severity: 'info',
+      time:     triggered.targetTs,
+      zone:     zone.name,
+      message:  `🎒 ${vac.label}（${vac.icon}）期間中のため、平日でも${zone.name}の来客が休日水準（+${pct}%）まで増加予測。`,
+      action:   `${vac.label}に合わせた「学生・ファミリー向けサービス」（学割メニュー・お子様セット）を準備し、平日でも週末並みのスタッフ体制を確保することを推奨します。`,
+      factors:  triggered.factors
+    }];
+  }
+
+  /** 日没シフトアラート */
+  _detectSunsetShiftAlert(predictions, zone) {
+    const triggered = predictions.find(p =>
+      p.factors?.sunsetScenario === 'sunset_dinner_rush' ||
+      p.factors?.sunsetScenario === 'sunset_evening_market' ||
+      p.factors?.sunsetScenario === 'sunset_outdoor_departure'
+    );
+    if (!triggered) return [];
+    const sc = triggered.factors.sunsetScenario;
+    const sunsetStr = window.weatherClient?.getSunsetTimeString?.() ?? '日没時刻';
+    let message, action;
+    if (sc === 'sunset_dinner_rush') {
+      const pct = Math.round((triggered.factors.sunsetMod - 1) * 100);
+      message = `🌇 日没（${sunsetStr}前後）にディナー客が急増（+${pct}%）。ランチ→夕食の人流シフトが発生しています。`;
+      action  = 'ディナーメニューへの切り替え・テーブルセッティング変更のタイミングです。照明を落ち着いた雰囲気に変更し、「日没特別メニュー」を告知することで単価アップが見込めます。';
+    } else if (sc === 'sunset_evening_market') {
+      const pct = Math.round((triggered.factors.sunsetMod - 1) * 100);
+      message = `🏮 日没（${sunsetStr}）を境に夕方の買い物客が急増（+${pct}%）。`;
+      action  = 'タ方セールと夕食向け惣菜・テイクアウト商品を前面に。照明を明るく、活気のある演出でナイトマーケット感を演出してください。';
+    } else {
+      message = `🌃 日没（${sunsetStr}）後、屋外エリアから人が急減。公園・屋外施設の来客は急減予測です。`;
+      action  = '屋外エリアの照明確認と清掃スタッフの配置を日没30分前に開始してください。閉場準備のスタッフシフトを最適化する好機です。';
+    }
+    return [{
+      type:     'sunset_shift',
+      severity: 'info',
+      time:     triggered.targetTs,
+      zone:     zone.name,
+      message, action,
+      factors:  triggered.factors
     }];
   }
 

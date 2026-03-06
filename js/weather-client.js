@@ -11,6 +11,7 @@ class WeatherClient {
     this._forecast = null;
     this._lastFetched = 0;
     this._fetchPromise = null;
+    this._sunsetByDate = {}; // { 'YYYY-MM-DD': timestamp } 日没時刻キャッシュ
 
     // WMOコード → 日本語説明マッピング
     this.wmoDescriptions = {
@@ -43,6 +44,7 @@ class WeatherClient {
     this.lng = lng;
     this._forecast = null;
     this._lastFetched = 0;
+    this._sunsetByDate = {};
   }
 
   /**
@@ -72,10 +74,11 @@ class WeatherClient {
 
   async _doFetch() {
     const url = `${CONFIG.weather.apiBase}/forecast?` + new URLSearchParams({
-      latitude: this.lat.toFixed(4),
+      latitude:  this.lat.toFixed(4),
       longitude: this.lng.toFixed(4),
-      hourly: 'temperature_2m,weathercode,precipitation,relativehumidity_2m',
-      timezone: 'Asia/Tokyo',
+      hourly:    'temperature_2m,weathercode,precipitation,relativehumidity_2m',
+      daily:     'sunset',   // ← 日没時刻を daily パラメータで取得
+      timezone:  'Asia/Tokyo',
       forecast_days: CONFIG.weather.forecastDays
     });
 
@@ -83,6 +86,7 @@ class WeatherClient {
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const data = await response.json();
+      if (data.daily?.sunset) this._parseSunsets(data.daily);
       return this._parseForecast(data);
     } catch (e) {
       console.warn('[WeatherClient] API取得失敗、モックデータを使用:', e.message);
@@ -266,6 +270,65 @@ class WeatherClient {
       }
     }
     return forecast;
+  }
+
+  // ----------------------------------------------------------------
+  // 日没時刻（Sunset）
+  // ----------------------------------------------------------------
+
+  /** Open-Meteo daily.sunset 配列をパースして日付→タイムスタンプに変換 */
+  _parseSunsets(daily) {
+    const { time: dates, sunset: sunsets } = daily;
+    if (!dates || !sunsets) return;
+    for (let i = 0; i < dates.length; i++) {
+      const ts = new Date(sunsets[i]).getTime();
+      if (!isNaN(ts)) this._sunsetByDate[dates[i]] = ts;
+    }
+    console.log(`[WeatherClient] 日没時刻: ${Object.keys(this._sunsetByDate).length}日分を取得`);
+  }
+
+  /**
+   * 指定日の日没タイムスタンプを返す（取得失敗時は近似値）
+   * @param {Date|number|string} date
+   * @returns {number} UTC milliseconds
+   */
+  getSunsetForDate(date) {
+    const d   = new Date(date);
+    const key = d.toISOString().split('T')[0];
+    if (this._sunsetByDate[key]) return this._sunsetByDate[key];
+
+    // フォールバック: 東京の季節別近似日没時刻
+    const month = d.getMonth() + 1;
+    const approxHours = [17.0, 17.5, 18.0, 18.5, 19.0, 19.3, 19.2, 18.8,
+                          18.0, 17.3, 16.7, 16.5][month - 1];
+    const fallback = new Date(d);
+    fallback.setHours(Math.floor(approxHours), Math.round((approxHours % 1) * 60), 0, 0);
+    return fallback.getTime();
+  }
+
+  /**
+   * 対象時刻が「日没前後windowMs以内」かどうかを返す
+   * シナリオ3（夕方需要シフト）のトリガー判定に使用
+   * @param {number} targetTs - チェックしたい時刻（ms）
+   * @param {number} windowMs - 前後の余裕幅（デフォルト30分）
+   * @returns {{ isNearSunset: boolean, minutesFromSunset: number, sunsetTs: number }}
+   */
+  isNearSunset(targetTs, windowMs = 30 * 60 * 1000) {
+    const sunsetTs = this.getSunsetForDate(new Date(targetTs));
+    const diff     = targetTs - sunsetTs; // 正=日没後, 負=日没前
+    return {
+      isNearSunset:     Math.abs(diff) <= windowMs,
+      minutesFromSunset: Math.round(diff / 60000),
+      sunsetTs
+    };
+  }
+
+  /**
+   * 今日の日没時刻を "HH:MM" 形式で返す（UI表示用）
+   */
+  getSunsetTimeString() {
+    const ts = this.getSunsetForDate(new Date());
+    return new Date(ts).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
   }
 
   isDataAvailable() {

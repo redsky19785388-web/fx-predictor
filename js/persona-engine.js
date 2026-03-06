@@ -80,9 +80,11 @@ const PersonaEngine = (function () {
    * @param {Object|null} params.weather - { temp, precipitationProbability }
    * @param {number} params.transitDelayMin - 最大交通遅延（分）
    * @param {number} params.month - 月（1-12）
+   * @param {Object|null} params.schoolVacation - SchoolCalendar.check() の結果
    * @returns {Array<{id, label, short, icon, color, desc, percentage}>} - 割合順ソート済み
    */
-  function estimate({ zoneId, hour, isWeekend, isHoliday, weather, transitDelayMin = 0, month }) {
+  function estimate({ zoneId, hour, isWeekend, isHoliday, weather, transitDelayMin = 0, month,
+                       schoolVacation = null }) {
     const isWorkday = !isWeekend && !isHoliday;
     const raining   = weather && weather.precipitationProbability > 50;
     const cold      = weather && weather.temp < 10;
@@ -277,6 +279,19 @@ const PersonaEngine = (function () {
       // 軽微な遅延（5〜9分）: 小規模影響
       w.office_worker    *= 1.2;
       w.student          *= 1.1;
+    }
+
+    // ---- 学校長期休み補正（シナリオ2）----
+    // 平日でも学校が休みの場合、学生・ファミリーが昼間に自由行動できる
+    if (schoolVacation?.isVacation && isWorkday) {
+      const { studentBoost, familyBoost } =
+        window.schoolCalendar?.getPersonaBoost(schoolVacation.vacation.id) ||
+        { studentBoost: 2.0, familyBoost: 1.8 };
+      w.student      *= studentBoost;
+      w.local_family *= familyBoost;
+      // 平日に学生・家族が増える分、オフィスワーカーの相対的比率は下がる
+      w.office_worker    *= 0.75;
+      w.medical_academic *= 0.85;
     }
 
     // ---- 桜シーズン全体補正 ----

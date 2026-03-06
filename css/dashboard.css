@@ -2059,6 +2059,30 @@ textarea.form-control { resize: vertical; }
   padding-top: 8px;
 }
 
+/* 詳細データ行（ℹ️ ボタンで展開） */
+.action-detail-btn {
+  margin-left: auto;
+  cursor: pointer;
+  opacity: 0.6;
+  font-size: 14px;
+  flex-shrink: 0;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+.action-detail-btn:hover { opacity: 1; }
+
+.action-detail-row {
+  margin-top: 6px;
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(99,102,241,0.08);
+  border-radius: 4px;
+  padding: 6px 8px;
+  border-left: 2px solid var(--accent);
+  font-family: monospace;
+  line-height: 1.5;
+}
+
 /* レスポンシブ */
 @media (max-width: 1200px) {
   .rt-context-grid   { grid-template-columns: 1fr 1fr; }
