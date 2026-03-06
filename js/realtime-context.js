@@ -1,11 +1,53 @@
 /**
- * realtime-context.js - リアルタイム・コンテキスト統合（モック実装）
- * 交通機関の運行状況、近隣施設の混雑、SNSトレンドをシミュレート
+ * realtime-context.js - リアルタイム・コンテキスト統合
+ * 交通機関の運行状況（外部JSONフィード取得 + 5分キャッシュ）、
+ * 近隣施設の混雑、SNSトレンドをエリア別に提供する。
  * エリア別に対応（上野・新宿・渋谷・池袋・六本木）
  * CrowdSense Pro v3.0
  */
 
 const RealtimeContext = (function () {
+
+  // -------- 交通遅延APIフィード設定 --------
+
+  /**
+   * rti-giken.jp の無料遅延情報JSON（APIキー不要）
+   * 現在遅延中の路線一覧を返す。遅延なし路線は結果に含まれない。
+   * 例: [{ "name": "JR山手線", "company": "JR東日本", ... }, ...]
+   */
+  const TRANSIT_FEED_URL = 'https://rti-giken.jp/fhc/api/train_tetsudo/delay.json';
+  const TRANSIT_CACHE_TTL = 5 * 60 * 1000; // 5分
+  const TRANSIT_CACHE_KEY = 'crowdsense_transit_cache';
+
+  /**
+   * 外部JSONフィードの路線名 → 内部ID マッピング
+   * rti-giken.jp は日本語路線名でデータを返すため正規化する
+   */
+  const LINE_NAME_TO_ID = {
+    'JR山手線':           'jr_yamanote',
+    'JR上野東京ライン':   'jr_ueno_tokyo',
+    '東京メトロ日比谷線': 'metro_hibiya',
+    '東京メトロ銀座線':   'metro_ginza',
+    '京成電鉄':           'keisei',
+    '京成線':             'keisei',
+    'JR中央線':           'jr_chuo',
+    'JR中央・総武線':     'jr_chuo',
+    '小田急電鉄':         'odakyu',
+    '小田急線':           'odakyu',
+    '京王電鉄':           'keio',
+    '京王線':             'keio',
+    '東京メトロ丸ノ内線': 'metro_marunouchi',
+    'JR埼京線':           'jr_saikyo',
+    '東急東横線':         'tokyu_toyoko',
+    '東急田園都市線':     'tokyu_denentoshi',
+    '東京メトロ半蔵門線': 'metro_hanzomon',
+    '東武東上線':         'tobu_tojo',
+    '西武池袋線':         'seibu_ikebukuro',
+    '都営大江戸線':       'toei_oedo',
+    '東京メトロ南北線':   'metro_namboku',
+    '東京メトロ千代田線': 'metro_chiyoda',
+    '都営三田線':         'toei_mita',
+  };
 
   // -------- エリア別 交通路線定義 --------
 
@@ -87,7 +129,7 @@ const RealtimeContext = (function () {
         hourBases: [5,5,5,5,5,5,5,5,10,42,65,72,70,65,68,76,80,78,68,52,32,15,7,5] },
       { id: 'tobu_dept',       name: '東武百貨店',       icon: '🏬',
         hourBases: [5,5,5,5,5,5,5,5,10,40,63,70,68,63,66,74,78,76,66,50,30,14,7,5] },
-      { id: 'animate_ikebukuro','name': 'アニメイト池袋', icon: '🎌',
+      { id: 'animate_ikebukuro', name: 'アニメイト池袋', icon: '🎌',
         hourBases: [5,5,5,5,5,5,5,5,8,25,45,58,65,68,72,78,82,80,70,55,35,15,8,5] }
     ],
     roppongi: [
@@ -150,23 +192,165 @@ const RealtimeContext = (function () {
     transit: [],
     nearbyCrowding: [],
     snsTrends: [],
-    lastUpdated: null
+    lastUpdated: null,
+    transitSource: 'mock' // 'api' | 'cache' | 'mock'
   };
 
   let _listeners = [];
   let _intervalId = null;
 
-  // -------- モックデータ生成 --------
+  // in-memory transit cache（ページ内高速参照用）
+  let _transitMemCache = { data: null, fetchedAt: 0 };
 
-  function _generateTransitStatus() {
+  // -------- 交通遅延API取得 + キャッシュ --------
+
+  /**
+   * localStorage キャッシュを読み込む
+   * 有効期限（5分）内であればデータを返し、期限切れは null を返す
+   */
+  function _loadTransitCache() {
+    try {
+      const raw = localStorage.getItem(TRANSIT_CACHE_KEY);
+      if (!raw) return null;
+      const entry = JSON.parse(raw);
+      if (Date.now() - entry.fetchedAt < TRANSIT_CACHE_TTL) return entry;
+      return null; // 期限切れ
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * localStorage にキャッシュを保存する
+   */
+  function _saveTransitCache(parsedLines) {
+    const entry = { data: parsedLines, fetchedAt: Date.now() };
+    try {
+      localStorage.setItem(TRANSIT_CACHE_KEY, JSON.stringify(entry));
+    } catch (e) {
+      console.warn('[RealtimeContext] localStorage書き込み失敗:', e);
+    }
+    _transitMemCache = entry;
+  }
+
+  /**
+   * rti-giken.jp の遅延JSONを解析し、内部フォーマットへ変換する
+   * API は「遅延中の路線のみ」返すため、含まれない路線は平常運転とみなす
+   * @param {Array} apiData - API レスポンス配列
+   * @returns {Set<string>} 遅延中の内部ID集合
+   */
+  function _parseDelayedLineIds(apiData) {
+    const delayedIds = new Set();
+    if (!Array.isArray(apiData)) return delayedIds;
+    for (const item of apiData) {
+      const name = item.name || '';
+      // 部分一致で内部IDを検索（例: "JR中央線（快速）" → "jr_chuo"）
+      for (const [key, id] of Object.entries(LINE_NAME_TO_ID)) {
+        if (name.includes(key) || key.includes(name)) {
+          delayedIds.add(id);
+          break;
+        }
+      }
+    }
+    return delayedIds;
+  }
+
+  /**
+   * 外部JSONフィードから遅延情報を取得し、対象エリアの路線ステータスを構築する
+   * キャッシュ優先（メモリ → localStorage → API → モックフォールバック）
+   */
+  async function _fetchTransitStatus() {
+    const areaLines = TRANSIT_BY_AREA[_currentAreaId] || TRANSIT_BY_AREA.ueno_park;
+
+    // ① メモリキャッシュ確認（最速）
+    if (_transitMemCache.data !== null &&
+        Date.now() - _transitMemCache.fetchedAt < TRANSIT_CACHE_TTL) {
+      console.log('[RealtimeContext] 交通情報: メモリキャッシュ使用');
+      return _buildTransitFromDelayedIds(_transitMemCache.data, areaLines, 'cache');
+    }
+
+    // ② localStorageキャッシュ確認
+    const lsCache = _loadTransitCache();
+    if (lsCache) {
+      console.log('[RealtimeContext] 交通情報: localStorageキャッシュ使用');
+      _transitMemCache = lsCache; // メモリにも昇格
+      return _buildTransitFromDelayedIds(lsCache.data, areaLines, 'cache');
+    }
+
+    // ③ 外部APIフェッチ（キャッシュ期限切れまたは初回）
+    try {
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 8000); // 8秒タイムアウト
+      const res = await fetch(TRANSIT_FEED_URL, {
+        signal:  controller.signal,
+        headers: { 'Accept': 'application/json' }
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const apiData = await res.json();
+
+      const delayedIds = _parseDelayedLineIds(apiData);
+      _saveTransitCache(delayedIds); // メモリ + localStorage に保存
+
+      console.log(`[RealtimeContext] 交通情報: APIフェッチ成功（遅延路線数: ${delayedIds.size}）`);
+      return _buildTransitFromDelayedIds(delayedIds, areaLines, 'api');
+
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        console.warn('[RealtimeContext] 交通APIタイムアウト → モックにフォールバック');
+      } else {
+        console.warn('[RealtimeContext] 交通APIエラー → モックにフォールバック:', err.message);
+      }
+      // ④ フォールバック: モック生成
+      return _generateTransitStatusMock();
+    }
+  }
+
+  /**
+   * 遅延路線IDセットから、エリア路線の状態オブジェクト配列を構築する
+   * @param {Set<string>|Array} delayedIds - 遅延中の内部IDの集合
+   * @param {Array} areaLines - エリアの路線定義
+   * @param {'api'|'cache'} source - データソース
+   */
+  function _buildTransitFromDelayedIds(delayedIds, areaLines, source) {
+    // delayedIds は Set または Array (JSONシリアライズ後はArrayになる)
+    const idSet = delayedIds instanceof Set ? delayedIds : new Set(delayedIds);
+    _data.transitSource = source;
+
+    return areaLines.map(line => {
+      if (!idSet.has(line.id)) {
+        return { ...line, status: 'normal', delayMin: 0, message: '平常運転', impact: 'none' };
+      }
+      // 遅延中の場合は実際の遅延分数をAPIは提供しないため、
+      // ラッシュ時間帯に応じたヒューリスティックで分数を推定する
+      const hour = new Date().getHours();
+      const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
+      const delayMin = isRushHour
+        ? Math.floor(Math.random() * 20) + 10
+        : Math.floor(Math.random() * 15) + 5;
+
+      return {
+        ...line,
+        status:   'major_delay',
+        delayMin,
+        message:  `${delayMin}分以上遅延 — 混雑注意`,
+        impact:   'high'
+      };
+    });
+  }
+
+  // -------- モックフォールバック（API失敗時） --------
+
+  function _generateTransitStatusMock() {
     const now  = new Date();
     const hour = now.getHours();
     const isRushHour = (hour >= 7 && hour <= 9) || (hour >= 17 && hour <= 19);
-    // 六本木・歌舞伎町は深夜ラッシュも追加
     const isNightRush = (_currentAreaId === 'roppongi' || _currentAreaId === 'shinjuku') && hour >= 22;
     const baseDelayChance = (isRushHour || isNightRush) ? 0.38 : 0.18;
 
     const lines = TRANSIT_BY_AREA[_currentAreaId] || TRANSIT_BY_AREA.ueno_park;
+    _data.transitSource = 'mock';
     return lines.map(line => {
       const rand = Math.random();
       let status, delayMin, message, impact;
@@ -193,6 +377,8 @@ const RealtimeContext = (function () {
       return { ...line, status, delayMin, message, impact };
     });
   }
+
+  // -------- 近隣施設・SNSデータ生成 --------
 
   function _generateNearbyCrowding() {
     const hour = new Date().getHours();
@@ -228,13 +414,19 @@ const RealtimeContext = (function () {
 
   // -------- パブリックAPI --------
 
+  /**
+   * 全コンテキストデータを更新する（交通情報はAPIから非同期取得）
+   * リスナーは取得完了後に呼ばれる
+   */
   function refresh() {
-    _data.transit        = _generateTransitStatus();
-    _data.nearbyCrowding = _generateNearbyCrowding();
-    _data.snsTrends      = _generateSnsTrends();
-    _data.lastUpdated    = new Date();
-    _listeners.forEach(fn => {
-      try { fn(_data); } catch (e) { console.warn('[RealtimeContext] listener error', e); }
+    _fetchTransitStatus().then(transitLines => {
+      _data.transit        = transitLines;
+      _data.nearbyCrowding = _generateNearbyCrowding();
+      _data.snsTrends      = _generateSnsTrends();
+      _data.lastUpdated    = new Date();
+      _listeners.forEach(fn => {
+        try { fn(_data); } catch (e) { console.warn('[RealtimeContext] listener error', e); }
+      });
     });
   }
 
@@ -246,6 +438,9 @@ const RealtimeContext = (function () {
     refresh();
   }
 
+  /**
+   * 最も深刻な交通遅延情報を返す（予測エンジン・ペルソナエンジン連携用）
+   */
   function getWorstTransitDelay() {
     if (!_data.transit.length) return { delayMin: 0, name: '', status: 'normal', message: '平常運転' };
     return _data.transit.reduce((worst, line) =>
@@ -260,20 +455,48 @@ const RealtimeContext = (function () {
     return jrLines.reduce((worst, l) => l.delayMin > worst.delayMin ? l : worst, jrLines[0]);
   }
 
+  /**
+   * 交通遅延の混雑影響レベルを返す（予測エンジン連携用）
+   * @returns {'none'|'minor'|'major'|'suspended'}
+   */
+  function getDelayImpactLevel() {
+    const worst = getWorstTransitDelay();
+    if (worst.status === 'suspended')   return 'suspended';
+    if (worst.status === 'major_delay') return 'major';
+    if (worst.status === 'minor_delay') return 'minor';
+    return 'none';
+  }
+
+  /**
+   * データソース情報を返す（UI表示用）
+   * @returns {{ source: string, fetchedAt: Date|null }}
+   */
+  function getDataSourceInfo() {
+    return {
+      source:    _data.transitSource || 'mock',
+      fetchedAt: _data.lastUpdated
+    };
+  }
+
   function onChange(fn) { _listeners.push(fn); }
 
   function init(intervalMs = 3 * 60 * 1000) {
     refresh();
     if (_intervalId) clearInterval(_intervalId);
     _intervalId = setInterval(refresh, intervalMs);
-    console.log('[RealtimeContext] 初期化完了（更新間隔:', intervalMs / 1000, '秒）');
+    console.log('[RealtimeContext] 初期化完了（更新間隔:', intervalMs / 1000, '秒, 交通API TTL: 5分）');
   }
 
   function stop() {
     if (_intervalId) { clearInterval(_intervalId); _intervalId = null; }
   }
 
-  return { init, stop, refresh, getData, setArea, getWorstTransitDelay, getWorstJrDelay, onChange };
+  return {
+    init, stop, refresh, getData, setArea,
+    getWorstTransitDelay, getWorstJrDelay,
+    getDelayImpactLevel, getDataSourceInfo,
+    onChange
+  };
 
 })();
 

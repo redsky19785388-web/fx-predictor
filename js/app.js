@@ -89,6 +89,8 @@ const App = (function () {
     // リアルタイム・コンテキスト初期化（3分ごと自動更新）
     realtimeContext.init(3 * 60 * 1000);
     realtimeContext.onChange(() => _renderRealtimePanels());
+    // 交通遅延レベル変化時は予測キャッシュをクリアして再計算を促す
+    realtimeContext.onChange(data => predictionEngine.onTransitStatusChange(data));
 
     // ダッシュボード初期表示
     await _refreshDashboard();
@@ -830,7 +832,10 @@ const App = (function () {
 
     const updEl = document.getElementById('rt-transit-updated');
     if (updEl && lastUpdated) {
-      updEl.textContent = `更新: ${new Date(lastUpdated).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}`;
+      const srcInfo  = realtimeContext.getDataSourceInfo();
+      const srcLabel = srcInfo.source === 'api'   ? '🌐 API取得'   :
+                       srcInfo.source === 'cache' ? '💾 キャッシュ' : '🔄 シミュレート';
+      updEl.textContent = `更新: ${new Date(lastUpdated).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' })}  ${srcLabel}`;
     }
   }
 

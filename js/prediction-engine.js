@@ -1,23 +1,27 @@
 /**
- * prediction-engine.js - 上野公園特化 多変数混雑予測エンジン v2.0
+ * prediction-engine.js - 上野公園特化 多変数混雑予測エンジン v2.1
  *
  * 予測式:
  *   predicted = base_historical × weather_modifier × event_modifier
  *             × day_type_modifier × cherry_blossom_modifier × monday_museum_modifier
+ *             × seasonal_modifier × bias_correction × transit_delay_modifier
  *
  * 上野特有のモディファイア:
- *   - cherry_blossom_modifier : 桜シーズン（3月下旬〜4月）の爆発的増加
- *   - monday_museum_modifier  : 月曜の美術館・博物館休館による人流変化
- *   - seasonal_modifier       : 上野公園の季節パターン（蓮、紅葉、年末等）
+ *   - cherry_blossom_modifier  : 桜シーズン（3月下旬〜4月）の爆発的増加
+ *   - monday_museum_modifier   : 月曜の美術館・博物館休館による人流変化
+ *   - seasonal_modifier        : 上野公園の季節パターン（蓮、紅葉、年末等）
+ *   - transit_delay_modifier   : 交通遅延・運転見合わせ時の屋内避難混雑上方修正
+ *                                (cafe/market/屋内施設に +20〜40%)
  */
 
 class PredictionEngine {
   constructor() {
-    this.dataManager   = null;
-    this.weatherClient = null;
-    this.eventManager  = null;
-    this._predictionCache = {};
-    this._cacheExpiry = 10 * 60 * 1000; // 10分
+    this.dataManager        = null;
+    this.weatherClient      = null;
+    this.eventManager       = null;
+    this._predictionCache   = {};
+    this._cacheExpiry       = 10 * 60 * 1000; // 10分
+    this._lastTransitLevel  = 'none';
   }
 
   init(dataManager, weatherClient, eventManager) {
@@ -119,6 +123,9 @@ class PredictionEngine {
     // ⑧ バイアス補正（Ground Truth実績から自己学習）
     const biasFactor = this.dataManager.getBiasCorrection(zone.id);
 
+    // ⑨ 交通遅延による屋内避難モディファイア（RealtimeContext連携）
+    const transitDelayMod = this._getTransitDelayModifier(zone);
+
     // 合成
     let predicted = base
       * weatherMod
@@ -127,7 +134,8 @@ class PredictionEngine {
       * cherryBlossomMod
       * mondayMuseumMod
       * seasonalMod
-      * biasFactor;
+      * biasFactor
+      * transitDelayMod;
     predicted = Math.max(1, Math.min(100, Math.round(predicted)));
 
     return this._makePrediction(zone.id, targetTs, predicted, confidence, {
@@ -139,6 +147,8 @@ class PredictionEngine {
       mondayMuseumMod:   parseFloat(mondayMuseumMod.toFixed(2)),
       seasonalMod:       parseFloat(seasonalMod.toFixed(2)),
       biasFactor:        parseFloat(biasFactor.toFixed(3)),
+      transitDelayMod:   parseFloat(transitDelayMod.toFixed(2)),
+      transitStatus:     window.realtimeContext?.getDelayImpactLevel() ?? 'none',
       weatherInfo:       weather,
       events:            nearbyEvents.map(e => ({ name: e.name, impact: e.impact }))
     });
@@ -233,6 +243,58 @@ class PredictionEngine {
   }
 
   /**
+   * ⑨ 交通遅延・運転見合わせ による屋内避難混雑モディファイア
+   *
+   * 遅延／見合わせ検知時、足止めされた乗客が近隣の屋内施設に流入するため
+   * カフェ・屋内休憩スペース・飲食市場の予測値を上方修正する。
+   *
+   * 影響対象ゾーンタイプと修正幅:
+   *   suspended  : cafe +40%, market +30%, leisure(屋内) +25%
+   *   major_delay: cafe +30%, market +20%, leisure(屋内) +20%
+   *   minor_delay: cafe +10%, market  +5%
+   *   none       : 修正なし
+   *
+   * RealtimeContext が未初期化の場合は 1.0 を返す（安全なフォールバック）
+   */
+  _getTransitDelayModifier(zone) {
+    if (!window.realtimeContext) return 1.0;
+
+    const impactLevel = window.realtimeContext.getDelayImpactLevel();
+    if (impactLevel === 'none') return 1.0;
+
+    // 屋内避難需要が高まるゾーンタイプを判定
+    const isCafe          = zone.type === 'cafe';
+    const isMarket        = zone.type === 'market';
+    const isIndoorLeisure = zone.type === 'leisure' && zone.isIndoor === true;
+    const isShelterZone   = isCafe || isMarket || isIndoorLeisure;
+
+    if (!isShelterZone) return 1.0;
+
+    switch (impactLevel) {
+      case 'suspended':
+        // 運転見合わせ: 最大避難需要（+25〜40%）
+        if (isCafe)          return 1.40;
+        if (isMarket)        return 1.30;
+        if (isIndoorLeisure) return 1.25;
+        break;
+      case 'major':
+        // 大幅遅延（15分超）: 高い避難需要（+20〜30%）
+        if (isCafe)          return 1.30;
+        if (isMarket)        return 1.20;
+        if (isIndoorLeisure) return 1.20;
+        break;
+      case 'minor':
+        // 小規模遅延（5〜14分）: 軽微な流入（+5〜10%）
+        if (isCafe)   return 1.10;
+        if (isMarket) return 1.05;
+        break;
+      default:
+        break;
+    }
+    return 1.0;
+  }
+
+  /**
    * ⑦ 上野公園季節モディファイア
    * - ぼたん祭り（4/10〜5/6）: shrine 1.6x
    * - 蓮の開花（7/20〜8/10）: leisure 1.4x
@@ -311,6 +373,11 @@ class PredictionEngine {
     if (f.cherryBlossomMod > 1.5) parts.push(`🌸 桜シーズン（×${f.cherryBlossomMod.toFixed(1)}）の影響で通常比${Math.round(f.cherryBlossomMod*100-100)}%増。`);
     if (f.eventMod > 1.2 && f.events?.length > 0) parts.push(`イベント「${f.events[0].name}」の集客効果あり。`);
     if (f.dayTypeMod >= 1.4) parts.push(`週末・祝日の家族連れ需要増。`);
+    if (f.transitDelayMod > 1.1) {
+      const pct = Math.round((f.transitDelayMod - 1) * 100);
+      const label = f.transitStatus === 'suspended' ? '🚨 運転見合わせ' : '🚃 交通遅延';
+      parts.push(`${label}による屋内避難流入で+${pct}%上方修正済み。`);
+    }
     return parts.join('');
   }
 
@@ -446,6 +513,21 @@ class PredictionEngine {
   getConfidencePercent(confidence) { return Math.round(confidence * 100); }
 
   clearCache() { this._predictionCache = {}; }
+
+  /**
+   * 交通遅延ステータス変化時に予測キャッシュを自動クリアする
+   * RealtimeContext の onChange に登録して使用する
+   */
+  onTransitStatusChange(newData) {
+    const newLevel = window.realtimeContext?.getDelayImpactLevel() ?? 'none';
+    if (newLevel !== this._lastTransitLevel) {
+      this._lastTransitLevel = newLevel;
+      if (newLevel !== 'none') {
+        console.log(`[PredictionEngine] 交通遅延レベル変化(${newLevel}) → 予測キャッシュクリア`);
+        this.clearCache();
+      }
+    }
+  }
 
   _makePrediction(zoneId, targetTs, predictedLevel, confidence, factors) {
     return { zoneId, targetTs, predictedLevel, confidence: parseFloat(confidence.toFixed(2)), factors, generatedAt: Date.now() };

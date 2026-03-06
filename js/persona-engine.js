@@ -255,12 +255,26 @@ const PersonaEngine = (function () {
       w.student          *= 0.75;
     }
 
-    // ---- 交通遅延補正 ----
-    if (transitDelayMin >= 10) {
-      w.office_worker    *= 1.5;  // 足止めワーカー
+    // ---- 交通遅延・運転見合わせ補正 ----
+    // 遅延・見合わせで足止めされた乗客が屋内施設に滞留するため
+    // オフィスワーカーと学生の滞留率を引き上げ、
+    // 遠方からの観光客は移動を諦める傾向として観光客比率を下げる
+    if (transitDelayMin >= 100) {
+      // 運転見合わせ（delayMin === 999 を含む）: 大規模足止め
+      w.office_worker    *= 2.2;  // 帰宅困難ワーカーが大量滞留
+      w.student          *= 1.8;  // 通学困難学生の滞留
+      w.medical_academic *= 1.5;
+      w.local_family     *= 1.3;  // 近隣住民も外出自粛から帰宅困難へ
+      w.domestic_tourist *= 0.6;  // 観光客は観光を中断して移動手段を探す
+      w.inbound_tourist  *= 0.5;  // インバウンドは特に移動に困り観光中断
+    } else if (transitDelayMin >= 10) {
+      // 大幅遅延（10分以上）: 中規模足止め
+      w.office_worker    *= 1.5;
       w.medical_academic *= 1.3;
       w.student          *= 1.25;
+      w.domestic_tourist *= 0.85;
     } else if (transitDelayMin >= 5) {
+      // 軽微な遅延（5〜9分）: 小規模影響
       w.office_worker    *= 1.2;
       w.student          *= 1.1;
     }
